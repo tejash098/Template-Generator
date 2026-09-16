@@ -5,4 +5,20 @@ dist-ssr
 .DS_Store
 *.log
 .vite
+
+# Local AI/editor metadata
 CLAUDE.md
+claude.md
+AGENTS.md
+GEMINI.md
+agents.md
+agent.md
+Agent.md
+.claude/
+.cursor/
+.antigravity/
+
+# Project-local notes
+decision.md
+DESCISION.md
+GEMINI
