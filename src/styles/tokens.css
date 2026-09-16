@@ -1,0 +1,93 @@
+/*
+ * Design tokens, mirrored from the owner's project-dashboard (client/src/styles/
+ * tokens.css) so both apps share one look. Each --color-* inside @theme becomes a
+ * Tailwind utility (bg-surface, text-text-primary, border-border, ...).
+ *
+ * --color-page-bg also paints recessed surfaces inside cards (inputs, pills), so
+ * it stays a flat colour; the ambient gradient is layered separately by the
+ * .page-gradient rule in index.css.
+ */
+@theme {
+  --color-page-bg: #fdf8f3;
+  --color-sidebar-bg: #f5ede2;
+  --color-topbar-bg: #fdf8f3;
+  --color-surface: #ffffff;
+  --color-border: #e0d0bc;
+
+  --color-text-primary: #3b2410;
+  --color-text-secondary: #8a6648;
+
+  --color-accent: #c07a3a;
+  --color-accent-subtle: #fdf0e0;
+
+  --color-success: #3f8552;
+  --color-success-subtle: #e7f1e3;
+  --color-warning: #b8791f;
+  --color-warning-subtle: #fbeccd;
+  --color-danger: #b3402f;
+  --color-danger-subtle: #f7e0dc;
+
+  /* Modal + drawer backdrop; opacity is theme-dependent (see .dark). */
+  --color-scrim: rgba(0, 0, 0, 0.5);
+
+  /* Mukta gives Hindi UI labels a sans Devanagari face that matches the Latin
+     system font; both are bundled via @fontsource in main.tsx. */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Mukta', 'Noto Sans Devanagari', sans-serif;
+  --font-hindi: 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', serif;
+
+  --sidebar-width-expanded: 14rem;
+  --sidebar-width-collapsed: 4rem;
+}
+
+/*
+ * Dark mode: neutral greys with no hue; all warmth comes from the gradient.
+ * Accent/status hues are unchanged so the brand reads the same in both themes.
+ */
+.dark {
+  --color-page-bg: #0a0a0a;
+  --color-sidebar-bg: #141414;
+  --color-topbar-bg: #141414;
+  --color-surface: #171717;
+  --color-border: rgba(255, 255, 255, 0.1);
+
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1a1;
+
+  --color-accent: #d4914a;
+  --color-accent-subtle: rgba(212, 145, 74, 0.12);
+  --color-success: #6db97f;
+  --color-success-subtle: rgba(109, 185, 127, 0.12);
+  --color-warning: #d9a652;
+  --color-warning-subtle: rgba(217, 166, 82, 0.12);
+  --color-danger: #e08a76;
+  --color-danger-subtle: rgba(224, 138, 118, 0.12);
+
+  --color-scrim: rgba(0, 0, 0, 0.72);
+}
+
+/* Ambient page wash (applied by .page-gradient); not a @theme token because
+   there is no utility to generate for a gradient. Blooms in both diagonal
+   corners and stays fully transparent across the middle. */
+:root {
+  --gradient-page: linear-gradient(
+    135deg,
+    rgba(160, 100, 46, 0.24) 0%,
+    rgba(160, 100, 46, 0.1) 22%,
+    rgba(160, 100, 46, 0) 44%,
+    rgba(160, 100, 46, 0) 56%,
+    rgba(160, 100, 46, 0.1) 78%,
+    rgba(160, 100, 46, 0.24) 100%
+  );
+}
+
+.dark {
+  --gradient-page: linear-gradient(
+    135deg,
+    rgba(212, 145, 74, 0.13) 0%,
+    rgba(212, 145, 74, 0.045) 22%,
+    rgba(212, 145, 74, 0) 44%,
+    rgba(212, 145, 74, 0) 56%,
+    rgba(212, 145, 74, 0.045) 78%,
+    rgba(212, 145, 74, 0.13) 100%
+  );
+}

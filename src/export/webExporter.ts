@@ -65,7 +65,7 @@ export const webExporter: DocumentExporter = {
     const { PDFDocument } = await import('pdf-lib')
     const pdf = await PDFDocument.create()
     pdf.setTitle(job.title ?? job.fileStem)
-    pdf.setProducer('Shri Ram Bus Service Letters')
+    pdf.setProducer('Shri Ram Bus Service Bookings')
     pdf.setCreationDate(new Date())
     const page = pdf.addPage([mmToPt(job.page.widthMm), mmToPt(job.page.heightMm)])
     const image = await pdf.embedPng(await png.arrayBuffer())

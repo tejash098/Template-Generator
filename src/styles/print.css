@@ -1,0 +1,67 @@
+/*
+ * Print: only the sheet prints, at its true size, at the top-left of the page.
+ * The paper size itself is injected as an @page rule by the exporter.
+ *
+ * Unlayered on purpose so these rules beat every Tailwind utility, including
+ * the classes that park the preview off-screen on phones.
+ */
+@media print {
+  html {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root,
+  .app-shell,
+  .app-main {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
+  .page-gradient {
+    background-image: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .editor,
+  .editor-panes {
+    display: block !important;
+    height: auto !important;
+  }
+
+  .preview-pane {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    overflow: visible !important;
+  }
+
+  .preview-scaler {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  .preview-transform {
+    transform: none !important;
+  }
+
+  .sheet {
+    break-inside: avoid;
+    break-after: avoid;
+  }
+}
