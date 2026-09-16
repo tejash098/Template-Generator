@@ -7,7 +7,7 @@
   --page-w: 215.9mm;
   --page-h: 279.4mm;
   --u: calc(min(var(--page-w), var(--page-h)) / 100);
-  --brand: #f05a28;
+  --brand: #1f2a6e; /* pad ink colour; overridden per document (document/padColors.ts) */
   --ink: #141414;
   --font-body: 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', serif;
   --font-head: 'Mukta', 'Noto Sans Devanagari', sans-serif;
@@ -23,7 +23,10 @@
   position: relative;
   background: #fff;
   color: var(--ink);
+  color-scheme: light; /* the page is paper: never themed */
   font-family: var(--font-body);
+  font-size: calc(var(--u) * 2.7);
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -122,26 +125,33 @@
   line-height: 1.55;
 }
 
-.lh-prewrap {
+/* The booking as prose, followed by the mobile/bus lines. */
+.lh-prose {
+  margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  text-align: justify;
 }
 
-.lh-subject {
-  margin-top: 0.7em;
+.lh-lines {
+  margin-top: 0.9em;
+  line-height: 1.6;
 }
 
-.lh-subject-label {
-  font-weight: 700;
+/* Generated-on date at the left, signature block at the right. */
+.lh-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1em;
+  margin-top: 1.6em;
 }
 
-.lh-text {
-  margin-top: 0.7em;
+.lh-issued {
+  color: var(--ink);
 }
 
 .lh-signoff {
-  margin: 1.2em 0 0 auto;
-  width: max-content;
   min-width: 34%;
   max-width: 60%;
   text-align: center;
@@ -153,6 +163,13 @@
 
 .lh-signatory {
   font-weight: 700;
+  border-top: calc(var(--u) * 0.18) dotted var(--brand);
+  padding-top: 0.2em;
+}
+
+.lh-sign-label {
+  font-size: 0.85em;
+  color: var(--brand);
 }
 
 /* ---- Letterhead footer --------------------------------------------------- */

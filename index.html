@@ -1,10 +1,23 @@
 <!doctype html>
-<html lang="hi">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f05a28" />
-    <title>Shri Ram Bus Service — Letters</title>
+    <meta name="theme-color" content="#fdf8f3" />
+    <title>Shri Ram Bus Service — Bookings</title>
+    <script>
+      // Applies the persisted theme and UI language before the first paint.
+      // ThemeProvider / LocaleProvider set these in effects (after React
+      // mounts), so without this the page would flash light on every load for
+      // dark-theme users. Reads localStorage only, mirroring the providers.
+      try {
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark')
+        var locale = localStorage.getItem('srbs.locale')
+        if (locale === 'hi' || locale === 'en') document.documentElement.lang = locale
+      } catch (e) {
+        /* storage blocked: defaults apply */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

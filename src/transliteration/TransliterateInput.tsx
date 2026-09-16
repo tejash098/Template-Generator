@@ -12,7 +12,6 @@ import { flushSync } from 'react-dom'
 import { currentWord, type CurrentWord } from './currentWord'
 import { fetchHindiSuggestions } from './googleInputTools'
 import { transliterateWord } from './offlineRules'
-import './transliterate.css'
 
 /*
  * A text field that turns Roman typing into Devanagari as you go, Google
@@ -37,7 +36,11 @@ interface TransliterateInputProps {
   placeholder?: string
   rows?: number
   className?: string
+  /** Accessible labels for the suggestion strip (kept as props so this module stays i18n-free). */
+  labels?: { suggestions: string; offline: string }
 }
+
+const DEFAULT_LABELS = { suggestions: 'Hindi suggestions', offline: 'offline' }
 
 interface InFlight {
   word: string
@@ -77,6 +80,7 @@ export function TransliterateInput({
   placeholder,
   rows = 6,
   className,
+  labels = DEFAULT_LABELS,
 }: TransliterateInputProps) {
   const fieldRef = useRef<FieldElement>(null)
   const pendingCaret = useRef<PendingCaret | null>(null)
@@ -346,28 +350,36 @@ export function TransliterateInput({
   }
 
   return (
-    <div className="xlit">
+    <div className="relative">
       {multiline ? (
         <textarea ref={fieldRef as RefObject<HTMLTextAreaElement | null>} rows={rows} {...fieldProps} />
       ) : (
         <input ref={fieldRef as RefObject<HTMLInputElement | null>} type="text" {...fieldProps} />
       )}
       {enabled && suggestions.length > 0 && (
-        <div className="xlit-strip" role="listbox" aria-label="Hindi suggestions">
+        <div
+          className="mt-1 flex flex-wrap items-center gap-1 rounded-lg border border-border bg-surface p-1 font-hindi text-base"
+          role="listbox"
+          aria-label={labels.suggestions}
+        >
           {suggestions.map((s, i) => (
             <button
               key={`${i}-${s}`}
               type="button"
               role="option"
               aria-selected={i === active}
-              className={i === active ? 'xlit-option is-active' : 'xlit-option'}
+              className={`rounded px-2 py-0.5 text-text-primary hover:bg-accent-subtle ${
+                i === active ? 'bg-accent-subtle ring-1 ring-accent' : ''
+              }`}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => pickSuggestion(i)}
             >
               {s}
             </button>
           ))}
-          {source === 'offline' && <span className="xlit-source">offline</span>}
+          {source === 'offline' && (
+            <span className="ml-auto font-sans text-[0.7rem] tracking-wider text-text-secondary uppercase">{labels.offline}</span>
+          )}
         </div>
       )}
     </div>

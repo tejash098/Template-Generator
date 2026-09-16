@@ -1,17 +1,22 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { LetterContent } from '../document/LetterSheet'
+import type { BookingContent } from '../document/BookingSheet'
 import type { PageSpec } from '../document/pageSizes'
+import type { TemplateId } from '../templates/ids'
 
 /**
- * Local-first store. We persist the FORM DATA of each letter, never the
+ * Local-first store. We persist the FORM DATA of each booking, never the
  * rendered PDF/PNG — documents are regenerated on demand from these records.
- * The shape is kept flat and JSON-friendly so it can later be mirrored to
- * Supabase without translation.
+ * The shape is flat, JSON-friendly and indexable so it can later be mirrored
+ * to Supabase without translation.
+ *
+ * `issuedDate` (printed as जारी दिनांक) is not stored: it is derived from
+ * `createdAt` at render time so a receipt keeps its date when re-exported.
  */
-export interface LetterRecord extends LetterContent {
+export interface BookingRecord extends Omit<BookingContent, 'issuedDate'> {
   id: string
-  /** Numeric sequence behind `letterNo` (पत्रांक). */
+  /** Numeric sequence behind `bookingNo` (पत्रांक). */
   seq: number
+  template: TemplateId
   page: PageSpec
   createdAt: number
   updatedAt: number
@@ -22,16 +27,22 @@ export interface MetaRecord {
   value: number | string
 }
 
-export type LetterDb = Dexie & {
-  letters: EntityTable<LetterRecord, 'id'>
+export type AppDb = Dexie & {
+  bookings: EntityTable<BookingRecord, 'id'>
   meta: EntityTable<MetaRecord, 'key'>
 }
 
-export function createDb(name = 'srbs-letters'): LetterDb {
-  const db = new Dexie(name) as LetterDb
+export function createDb(name = 'srbs-letters'): AppDb {
+  const db = new Dexie(name) as AppDb
+  // v1 held the provisional letter form. v2 drops it and adds bookings; the
+  // meta table (and with it the पत्रांक sequence) carries over untouched.
   db.version(1).stores({
-    // Only indexed fields are listed; the rest of the record is stored as-is.
     letters: 'id, seq, date, updatedAt',
+    meta: 'key',
+  })
+  db.version(2).stores({
+    letters: null,
+    bookings: 'id, seq, bookingDate, travelDate, updatedAt',
     meta: 'key',
   })
   return db

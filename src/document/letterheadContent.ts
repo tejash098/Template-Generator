@@ -9,8 +9,6 @@ export const LETTERHEAD = {
   address: 'अखलासपुर बस स्टैण्ड के सामने, भभुआ (कैमूर) बिहार- 821101',
   letterNoLabel: 'पत्रांक :',
   dateLabel: 'दिनांक :',
-  recipientLabel: 'सेवा में,',
-  subjectLabel: 'विषय :-',
   footerNotes: [
     'नोट- बस के छतरी पर रखे सामान की गारंटी चालक की नहीं है।',
     'बारात जाने से पहले पुरा पैसा देना होगा।',
@@ -18,12 +16,9 @@ export const LETTERHEAD = {
   ],
 } as const
 
-/**
- * Defaults for the provisional form. The real field list and the form→body
- * mapping are still to be supplied by the product owner; keep this small.
- */
-export const LETTER_DEFAULTS = {
-  closing: 'भवदीय',
-  signatoryName: 'वशिष्ठ नारायण सिंह',
-  signatoryTitle: 'प्रोप्राइटर',
+/** Fixed Hindi labels of the booking receipt (sentences live in bookingText.ts). */
+export const BOOKING_TEXT = {
+  mobilePrefix: 'मो.-',
+  signatureLabel: 'हस्ताक्षर',
+  issuedLabel: 'जारी दिनांक :',
 } as const

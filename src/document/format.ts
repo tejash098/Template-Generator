@@ -17,3 +17,6 @@ export function formatDateDdMmYyyy(iso: string): string {
 export function fileStem(letterNo: string, iso: string): string {
   return `SRBS-${letterNo}-${iso}`.replace(/[^A-Za-z0-9._-]+/g, '_')
 }
+
+/** Rupee amounts as written on the pad: 15000 → "15000/-". */
+export const formatRupees = (amount: number): string => `${Math.round(amount)}/-`

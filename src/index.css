@@ -1,0 +1,33 @@
+/*
+ * Global stylesheet. Tailwind v4 is configured entirely in CSS: the design
+ * tokens live in styles/tokens.css (mirrored from the owner's
+ * project-dashboard so both apps share one look) and dark mode is the `.dark`
+ * class on <html>, applied by ThemeProvider and by the pre-hydration script
+ * in index.html.
+ *
+ * The printed page (document/sheet.css) and the print rules (styles/print.css)
+ * are deliberately plain, unlayered CSS.
+ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss';
+@import './styles/tokens.css';
+@custom-variant dark (&:where(.dark, .dark *));
+
+.page-gradient {
+  background-image: var(--gradient-page);
+}
+
+html {
+  background-color: var(--color-page-bg);
+}
+
+.dark {
+  color-scheme: dark; /* native date/time pickers and scrollbars follow the theme */
+}
+
+@layer base {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
