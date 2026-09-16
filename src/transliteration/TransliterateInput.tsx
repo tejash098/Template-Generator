@@ -8,6 +8,8 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from 'react'
+import { flushSync } from 'react-dom'
+import { currentWord, type CurrentWord } from './currentWord'
 import { fetchHindiSuggestions } from './googleInputTools'
 import { transliterateWord } from './offlineRules'
 import './transliterate.css'
@@ -15,8 +17,12 @@ import './transliterate.css'
 /*
  * A text field that turns Roman typing into Devanagari as you go, Google
  * Input Tools style: the word being typed gets suggestions; space, Enter or
- * punctuation commits the highlighted one. Works fully offline via the
- * rule-based fallback, and switches back to online suggestions automatically.
+ * punctuation commits the highlighted one.
+ *
+ * Latency strategy: the offline rule engine answers instantly, so a commit
+ * never waits on the network. If the online lookup for that exact word lands
+ * a moment later, the just-committed text is upgraded in place (only if it is
+ * still untouched). Network failures switch to offline-only for a while.
  */
 
 type FieldElement = HTMLInputElement | HTMLTextAreaElement
@@ -33,9 +39,24 @@ interface TransliterateInputProps {
   className?: string
 }
 
-interface CurrentWord {
+interface InFlight {
+  word: string
+  controller: AbortController
+}
+
+/** An offline commit that may still be replaced by the online result. */
+interface PendingUpgrade {
+  word: string
   start: number
   text: string
+}
+
+const MAX_PENDING_UPGRADES = 12
+
+/** Caret to restore once React has rendered exactly `forValue`. */
+interface PendingCaret {
+  position: number
+  forValue: string
 }
 
 /** Keys that end the current word and trigger transliteration. */
@@ -44,19 +65,8 @@ const SUGGEST_DEBOUNCE_MS = 90
 const OFFLINE_RETRY_MS = 30_000
 
 let offlineUntil = 0
-
-/**
- * The Roman word immediately before the caret, if it should be transliterated.
- * Skips anything with digits (BR24P8555) and all-caps tokens (AM, RTA).
- */
-export function currentWord(text: string, caret: number): CurrentWord | null {
-  const m = /[A-Za-z0-9]+$/.exec(text.slice(0, caret))
-  if (!m) return null
-  const word = m[0]
-  if (!/^[A-Za-z]+$/.test(word)) return null
-  if (word.length > 1 && word === word.toUpperCase()) return null
-  return { start: caret - word.length, text: word }
-}
+const onlineAllowed = () =>
+  Date.now() >= offlineUntil && !(typeof navigator !== 'undefined' && navigator.onLine === false)
 
 export function TransliterateInput({
   value,
@@ -69,37 +79,153 @@ export function TransliterateInput({
   className,
 }: TransliterateInputProps) {
   const fieldRef = useRef<FieldElement>(null)
-  const pendingCaret = useRef<number | null>(null)
+  const pendingCaret = useRef<PendingCaret | null>(null)
   const debounceTimer = useRef<number | undefined>(undefined)
-  const abortRef = useRef<AbortController | null>(null)
+  const suggestLookup = useRef<InFlight | null>(null)
+  const pendingUpgrades = useRef<PendingUpgrade[]>([])
+  const upgradeLookups = useRef(new Set<string>())
+  const onChangeRef = useRef(onChange)
 
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [suggestionsFor, setSuggestionsFor] = useState('')
   const [source, setSource] = useState<'online' | 'offline'>('online')
   const [active, setActive] = useState(0)
 
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
   const clearSuggestions = useCallback(() => {
     window.clearTimeout(debounceTimer.current)
-    abortRef.current?.abort()
     setSuggestions([])
     setSuggestionsFor('')
     setActive(0)
   }, [])
 
   // Restore the caret after a programmatic replacement re-renders the value.
+  // Guarded by the value it was computed for, so a lost or superseded update
+  // can never drop the caret into the middle of other text.
   useLayoutEffect(() => {
     const el = fieldRef.current
-    if (el && pendingCaret.current !== null) {
-      el.setSelectionRange(pendingCaret.current, pendingCaret.current)
-      pendingCaret.current = null
-    }
+    const pending = pendingCaret.current
+    if (!el || !pending) return
+    pendingCaret.current = null
+    if (pending.forValue === value) el.setSelectionRange(pending.position, pending.position)
   }, [value])
 
-  useEffect(() => {
-    if (!enabled) clearSuggestions()
-  }, [enabled, clearSuggestions])
+  // Drop suggestions the moment Hindi typing is switched off (state adjusted
+  // during render, so no extra effect pass).
+  const [prevEnabled, setPrevEnabled] = useState(enabled)
+  if (prevEnabled !== enabled) {
+    setPrevEnabled(enabled)
+    setSuggestions([])
+    setSuggestionsFor('')
+    setActive(0)
+  }
 
-  useEffect(() => () => clearSuggestions(), [clearSuggestions])
+  useEffect(() => {
+    if (!enabled) {
+      window.clearTimeout(debounceTimer.current)
+      suggestLookup.current?.controller.abort()
+      pendingUpgrades.current = []
+    }
+  }, [enabled])
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(debounceTimer.current)
+      suggestLookup.current?.controller.abort()
+      pendingUpgrades.current = []
+    },
+    [],
+  )
+
+  /**
+   * Replace an offline-committed word with the online spelling, provided the
+   * text is still exactly what was committed. Later pending upgrades have
+   * their offsets shifted by the length change.
+   */
+  const applyUpgrade = useCallback((word: string, online: string[]) => {
+    const el = fieldRef.current
+    const replacement = online[0]
+    if (!el || !replacement) return
+    const matches = pendingUpgrades.current.filter((u) => u.word === word)
+    pendingUpgrades.current = pendingUpgrades.current.filter((u) => u.word !== word)
+
+    let text = el.value
+    let caret = el.selectionStart ?? text.length
+    let changed = false
+    // Apply from the end so earlier offsets stay valid while we go.
+    for (const up of matches.sort((a, b) => b.start - a.start)) {
+      if (text.slice(up.start, up.start + up.text.length) !== up.text || replacement === up.text) continue
+      const delta = replacement.length - up.text.length
+      text = text.slice(0, up.start) + replacement + text.slice(up.start + up.text.length)
+      if (caret >= up.start + up.text.length) caret += delta
+      pendingUpgrades.current = pendingUpgrades.current.map((o) =>
+        o.start > up.start ? { ...o, start: o.start + delta } : o,
+      )
+      changed = true
+    }
+    if (!changed) return
+    pendingCaret.current = { position: caret, forValue: text }
+    // Synchronous so no keystroke can interleave with a half-applied upgrade.
+    flushSync(() => onChangeRef.current(text))
+  }, [])
+
+  const markNetworkFailure = (err: unknown) => {
+    if ((err as Error).name === 'AbortError') return
+    offlineUntil = Date.now() + OFFLINE_RETRY_MS
+  }
+
+  /** Online lookup for the word being typed; supersedes the previous one. */
+  const lookupForSuggestions = useCallback(
+    (word: string) => {
+      if (!onlineAllowed() || suggestLookup.current?.word === word) return
+      suggestLookup.current?.controller.abort()
+      const controller = new AbortController()
+      suggestLookup.current = { word, controller }
+
+      fetchHindiSuggestions(word, { signal: controller.signal })
+        .then((online) => {
+          if (controller.signal.aborted || online.length === 0) return
+          const el = fieldRef.current
+          if (!el) return
+          const typing = currentWord(el.value, el.selectionStart ?? el.value.length)
+          if (typing?.text === word) {
+            setSuggestions(online)
+            setSuggestionsFor(word)
+            setSource('online')
+            setActive(0)
+          } else {
+            // Committed meanwhile with the offline guess.
+            applyUpgrade(word, online)
+          }
+        })
+        .catch(markNetworkFailure)
+        .finally(() => {
+          if (suggestLookup.current?.controller === controller) suggestLookup.current = null
+        })
+    },
+    [applyUpgrade],
+  )
+
+  /** Online lookup for a word already committed offline; never aborted. */
+  const lookupForUpgrade = useCallback(
+    (word: string) => {
+      if (!onlineAllowed() || upgradeLookups.current.has(word)) return
+      if (suggestLookup.current?.word === word) {
+        // The suggestion request will finish the job; stop it being aborted.
+        suggestLookup.current = null
+        return
+      }
+      upgradeLookups.current.add(word)
+      fetchHindiSuggestions(word)
+        .then((online) => applyUpgrade(word, online))
+        .catch(markNetworkFailure)
+        .finally(() => upgradeLookups.current.delete(word))
+    },
+    [applyUpgrade],
+  )
 
   const refreshSuggestions = useCallback(
     (text: string, caret: number) => {
@@ -115,42 +241,41 @@ export function TransliterateInput({
       setActive(0)
 
       window.clearTimeout(debounceTimer.current)
-      abortRef.current?.abort()
-      if (Date.now() < offlineUntil || (typeof navigator !== 'undefined' && navigator.onLine === false)) return
-
-      debounceTimer.current = window.setTimeout(async () => {
-        const controller = new AbortController()
-        abortRef.current = controller
-        try {
-          const online = await fetchHindiSuggestions(word.text, { signal: controller.signal })
-          if (controller.signal.aborted || online.length === 0) return
-          setSuggestions(online)
-          setSuggestionsFor(word.text)
-          setSource('online')
-          setActive(0)
-        } catch (err) {
-          if ((err as Error).name === 'AbortError') return
-          offlineUntil = Date.now() + OFFLINE_RETRY_MS
-        }
-      }, SUGGEST_DEBOUNCE_MS)
+      debounceTimer.current = window.setTimeout(() => lookupForSuggestions(word.text), SUGGEST_DEBOUNCE_MS)
     },
-    [clearSuggestions],
+    [clearSuggestions, lookupForSuggestions],
   )
 
-  /** Replace `word` with `replacement` (already including any trailing char). */
-  const commit = useCallback(
-    (el: FieldElement, word: CurrentWord, replacement: string) => {
+  /** Replace `word` with the best available Hindi plus `typed`. */
+  const commitWord = useCallback(
+    (el: FieldElement, word: CurrentWord, typed: string) => {
+      const online = suggestionsFor === word.text && source === 'online' ? suggestions[active] : undefined
+      const replacement = online ?? transliterateWord(word.text)
       const caret = el.selectionStart ?? el.value.length
-      const next = el.value.slice(0, word.start) + replacement + el.value.slice(caret)
-      pendingCaret.current = word.start + replacement.length
+      const next = el.value.slice(0, word.start) + replacement + typed + el.value.slice(caret)
+      pendingCaret.current = { position: word.start + replacement.length + typed.length, forValue: next }
       clearSuggestions()
+
+      if (!online) {
+        // Let the network improve this word shortly, if it can.
+        pendingUpgrades.current = [
+          ...pendingUpgrades.current.slice(-(MAX_PENDING_UPGRADES - 1)),
+          { word: word.text, start: word.start, text: replacement },
+        ]
+        lookupForUpgrade(word.text)
+      }
       onChange(next)
     },
-    [clearSuggestions, onChange],
+    [active, clearSuggestions, lookupForUpgrade, onChange, source, suggestions, suggestionsFor],
   )
 
-  const bestFor = (word: CurrentWord) =>
-    suggestionsFor === word.text && suggestions[active] ? suggestions[active] : transliterateWord(word.text)
+  const insertAtCaret = (el: FieldElement, text: string) => {
+    const start = el.selectionStart ?? el.value.length
+    const end = el.selectionEnd ?? start
+    const next = el.value.slice(0, start) + text + el.value.slice(end)
+    pendingCaret.current = { position: start + text.length, forValue: next }
+    onChange(next)
+  }
 
   const handleChange = (e: ChangeEvent<FieldElement>) => {
     const el = e.target
@@ -174,32 +299,36 @@ export function TransliterateInput({
     }
     if (!COMMIT_KEYS.has(e.key)) return
 
-    const word = currentWord(el.value, el.selectionStart ?? el.value.length)
     const typed = e.key === 'Enter' ? (multiline ? '\n' : '') : e.key === '|' ? '।' : e.key
-    if (!word) {
-      if (e.key === '|') {
-        e.preventDefault()
-        commit(el, { start: el.selectionStart ?? el.value.length, text: '' }, typed)
-      }
-      return
+    const word = currentWord(el.value, el.selectionStart ?? el.value.length)
+    if (word) {
+      e.preventDefault()
+      commitWord(el, word, typed)
+    } else if (e.key === '|') {
+      e.preventDefault()
+      insertAtCaret(el, typed)
     }
-    e.preventDefault()
-    commit(el, word, bestFor(word) + typed)
   }
 
   const handleBlur = () => {
     const el = fieldRef.current
     if (!enabled || !el) return
     const word = currentWord(el.value, el.selectionStart ?? el.value.length)
-    if (word) commit(el, word, bestFor(word))
+    if (word) commitWord(el, word, '')
     else clearSuggestions()
   }
 
-  const pickSuggestion = (s: string) => {
+  const pickSuggestion = (index: number) => {
     const el = fieldRef.current
     if (!el) return
     const word = currentWord(el.value, el.selectionStart ?? el.value.length)
-    if (word) commit(el, word, s + ' ')
+    if (word) {
+      const replacement = suggestions[index]
+      const next = el.value.slice(0, word.start) + replacement + ' ' + el.value.slice(el.selectionStart ?? el.value.length)
+      pendingCaret.current = { position: word.start + replacement.length + 1, forValue: next }
+      clearSuggestions()
+      onChange(next)
+    }
     el.focus()
   }
 
@@ -233,7 +362,7 @@ export function TransliterateInput({
               aria-selected={i === active}
               className={i === active ? 'xlit-option is-active' : 'xlit-option'}
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => pickSuggestion(s)}
+              onClick={() => pickSuggestion(i)}
             >
               {s}
             </button>

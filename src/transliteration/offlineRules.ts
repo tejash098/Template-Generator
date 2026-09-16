@@ -10,6 +10,8 @@
  * the fallback.
  */
 
+import { isTransliterable } from './currentWord'
+
 const VIRAMA = '्' // ्  (halant)
 const ANUSVARA = 'ं' // ं
 
@@ -107,8 +109,8 @@ function lookup<T>(table: Record<string, T>, text: string, i: number): [string, 
 /** Transliterate one Roman word (letters only). */
 export function transliterateWord(raw: string): string {
   if (!raw) return raw
-  // "Namaste" (sentence capital) is not a retroflex hint; "Tata" would be, so
-  // only normalise when just the first letter is capitalised.
+  // A sentence-case word ("Namaste") is not a retroflex hint, so lowercase it;
+  // capitals elsewhere ("kaTa") keep their T/D/N/Sh meaning.
   const word = /^[A-Z][a-z]*$/.test(raw) ? raw.toLowerCase() : raw
 
   const out: string[] = []
@@ -167,8 +169,11 @@ export function transliterateWord(raw: string): string {
         // after a consonant it is the inherent vowel and emits nothing.
         if (atEnd) out.push(open ? 'ा' : 'आ')
         else if (!open) out.push(independent)
+      } else if (open) {
+        // Word-final short i is rare in Hindi ("meri" → मेरी, "ki" → की).
+        out.push(key === 'i' && atEnd ? 'ी' : matra)
       } else {
-        out.push(open ? matra : independent)
+        out.push(independent)
       }
       open = false
       // An inherent "a" is not an explicit vowel for the nasal-ending rule.
@@ -187,7 +192,12 @@ export function transliterateWord(raw: string): string {
   return out.join('')
 }
 
-/** Transliterate all Latin words in a string, leaving everything else intact. */
+/**
+ * Transliterate every Hindi-looking Latin word in a string, leaving numbers,
+ * codes and acronyms intact. `|` becomes the danda (।).
+ */
 export function transliterateText(text: string): string {
-  return text.replace(/[A-Za-z]+/g, (w) => transliterateWord(w)).replace(/\|/g, '।')
+  return text
+    .replace(/[A-Za-z0-9]+/g, (token) => (isTransliterable(token) ? transliterateWord(token) : token))
+    .replace(/\|/g, '।')
 }
