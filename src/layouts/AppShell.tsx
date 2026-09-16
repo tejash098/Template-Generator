@@ -1,6 +1,7 @@
 import { Menu } from 'lucide-react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from '../components/nav/Sidebar'
+import { Logo } from '../components/ui/Logo'
 import { A11Y, ICON_SIZE, TRANSITION } from '../config/constants'
 import { useLocale } from '../i18n/useLocale'
 import { useSidebar } from '../layout/useSidebar'
@@ -44,8 +45,11 @@ export function AppShell() {
           >
             <Menu size={ICON_SIZE.LG} aria-hidden="true" />
           </button>
-          <span lang="hi" className="text-sm font-semibold text-text-primary">
-            {t('app.brandHindi')}
+          <span className="flex items-center gap-2">
+            <Logo size={26} />
+            <span lang="hi" className="text-sm font-semibold text-text-primary">
+              {t('app.brandHindi')}
+            </span>
           </span>
           <span className="w-10" aria-hidden="true" />
         </header>
