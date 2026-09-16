@@ -1,5 +1,3 @@
-import { toJpeg, toPng } from 'html-to-image'
-import { PDFDocument } from 'pdf-lib'
 import { CSS_DPI, mmToPt, mmToPx, type PageDimensionsMm } from '../document/pageSizes'
 import type { DocumentExporter, ExportJob, ImageFormat, ShareResult } from './exporter'
 
@@ -38,6 +36,9 @@ const isWebKit = () =>
   !/Chrome|Chromium|Edg\//.test(navigator.userAgent)
 
 async function captureDataUrl(job: ExportJob, format: ImageFormat, dpi: number): Promise<string> {
+  // Loaded on demand: the capture and PDF libraries are heavy and only needed
+  // once someone exports.
+  const { toJpeg, toPng } = await import('html-to-image')
   const options = {
     pixelRatio: pixelRatioFor(job.page, dpi),
     backgroundColor: '#ffffff',
@@ -61,6 +62,7 @@ export const webExporter: DocumentExporter = {
 
   async toPdf(job) {
     const png = await this.toImage(job, 'png', DEFAULT_EXPORT_DPI)
+    const { PDFDocument } = await import('pdf-lib')
     const pdf = await PDFDocument.create()
     pdf.setTitle(job.title ?? job.fileStem)
     pdf.setProducer('Shri Ram Bus Service Letters')
@@ -77,7 +79,6 @@ export const webExporter: DocumentExporter = {
     const style = document.createElement('style')
     style.textContent = `@page { size: ${page.widthMm}mm ${page.heightMm}mm; margin: 0; }`
     document.head.appendChild(style)
-    document.body.classList.add('is-printing')
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
     let done = false
@@ -85,7 +86,6 @@ export const webExporter: DocumentExporter = {
       if (done) return
       done = true
       style.remove()
-      document.body.classList.remove('is-printing')
       window.removeEventListener('afterprint', cleanup)
     }
     window.addEventListener('afterprint', cleanup)

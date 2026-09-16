@@ -2,6 +2,11 @@
   position: relative;
 }
 
+.xlit textarea,
+.xlit input {
+  display: block;
+}
+
 .xlit-strip {
   display: flex;
   flex-wrap: wrap;
