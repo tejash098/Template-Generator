@@ -1,0 +1,172 @@
+/*
+ * The printed page. Every dimension is derived from --u, one hundredth of the
+ * page's SHORTER side, so the letterhead keeps its proportions on any paper
+ * size and orientation (Letter, A4, A0, landscape, custom...).
+ */
+.sheet {
+  --page-w: 215.9mm;
+  --page-h: 279.4mm;
+  --u: calc(min(var(--page-w), var(--page-h)) / 100);
+  --brand: #f05a28;
+  --ink: #141414;
+  --font-body: 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', serif;
+  --font-head: 'Mukta', 'Noto Sans Devanagari', sans-serif;
+  --font-title: 'Rozha One', 'Tiro Devanagari Hindi', serif;
+
+  box-sizing: border-box;
+  width: var(--page-w);
+  height: var(--page-h);
+  padding: calc(var(--u) * 4) calc(var(--u) * 5.5) calc(var(--u) * 3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Letterhead header ------------------------------------------------- */
+.lh-head {
+  color: var(--brand);
+  font-family: var(--font-head);
+  font-weight: 700;
+  flex: none;
+}
+
+.lh-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: calc(var(--u) * 2.5);
+  line-height: 1.2;
+}
+
+.lh-swastika {
+  width: calc(var(--u) * 3.6);
+  height: calc(var(--u) * 3.6);
+}
+
+.lh-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 3);
+  margin-top: calc(var(--u) * 0.6);
+}
+
+.lh-bus {
+  width: calc(var(--u) * 12);
+  height: auto;
+  flex: none;
+}
+
+.lh-title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 400;
+  font-size: calc(var(--u) * 6.4);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.lh-address {
+  margin: calc(var(--u) * 1) calc(var(--u) * 6) 0;
+  padding: calc(var(--u) * 0.35) calc(var(--u) * 2);
+  border-radius: calc(var(--u) * 1.2);
+  background: var(--brand);
+  color: #fff;
+  text-align: center;
+  font-size: calc(var(--u) * 2.7);
+  line-height: 1.35;
+}
+
+.lh-meta {
+  margin-top: calc(var(--u) * 2);
+  font-size: calc(var(--u) * 2.5);
+  line-height: 1.4;
+}
+
+.lh-meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 0.8);
+}
+
+.lh-meta-right {
+  justify-content: flex-end;
+}
+
+.lh-meta-value {
+  min-width: calc(var(--u) * 22);
+  border-bottom: calc(var(--u) * 0.18) dotted var(--brand);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 400;
+  padding: 0 calc(var(--u) * 0.6);
+}
+
+/* ---- Letter body --------------------------------------------------------- */
+.lh-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  margin-top: calc(var(--u) * 2.2);
+}
+
+.lh-content {
+  --body-scale: 1;
+  font-size: calc(var(--u) * 2.7 * var(--body-scale));
+  line-height: 1.55;
+}
+
+.lh-prewrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lh-subject {
+  margin-top: 0.7em;
+}
+
+.lh-subject-label {
+  font-weight: 700;
+}
+
+.lh-text {
+  margin-top: 0.7em;
+}
+
+.lh-signoff {
+  margin: 1.2em 0 0 auto;
+  width: max-content;
+  min-width: 34%;
+  max-width: 60%;
+  text-align: center;
+}
+
+.lh-sign-space {
+  height: 3em; /* room for a pen signature */
+}
+
+.lh-signatory {
+  font-weight: 700;
+}
+
+/* ---- Letterhead footer --------------------------------------------------- */
+.lh-foot {
+  flex: none;
+  margin-top: calc(var(--u) * 1.6);
+  color: var(--brand);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: calc(var(--u) * 1.95);
+  line-height: 1.35;
+  text-align: center;
+}
+
+.lh-foot p {
+  margin: 0;
+}
