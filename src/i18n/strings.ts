@@ -12,7 +12,6 @@ export const DEFAULT_LOCALE: Locale = 'en'
 
 export const en = {
   'app.brand': 'Shri Ram Bus Service',
-  'app.brandHindi': 'श्री राम बस सर्विस',
   'app.title': 'Bookings',
 
   'nav.templates': 'Templates',
@@ -138,7 +137,6 @@ export type StringKey = keyof typeof en
 
 export const hi: Record<StringKey, string> = {
   'app.brand': 'श्री राम बस सर्विस',
-  'app.brandHindi': 'श्री राम बस सर्विस',
   'app.title': 'बुकिंग',
 
   'nav.templates': 'टेम्पलेट',

@@ -10,15 +10,15 @@ import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { NavItem } from './NavItem'
 
-/** Brand lockup: logo + Hindi wordmark (wordmark hidden when collapsed). */
+/** Brand lockup: logo + wordmark in the UI language (wordmark hidden when collapsed). */
 function Brand({ showWordmark }: { showWordmark: boolean }) {
-  const { t } = useLocale()
+  const { locale, t } = useLocale()
   return (
     <Link to="/" className={`flex min-w-0 items-center gap-2.5 rounded-lg ${A11Y.FOCUS_RING}`} title={t('app.brand')}>
       <Logo size={28} />
       {showWordmark && (
-        <span lang="hi" className="truncate text-sm font-semibold text-text-primary">
-          {t('app.brandHindi')}
+        <span lang={locale} className="truncate text-sm font-semibold text-text-primary">
+          {t('app.brand')}
         </span>
       )}
     </Link>
