@@ -175,7 +175,7 @@ export function BookingEditor() {
     navigate(template.routes.list)
   }
 
-  if (!id && !isTemplateId(requestedTemplate)) return <Navigate to="/" replace />
+  if (!id && !isTemplateId(requestedTemplate)) return <Navigate to="/templates" replace />
 
   if (status === 'missing') {
     return (
@@ -242,7 +242,14 @@ export function BookingEditor() {
             </p>
           )}
 
-          <ExportBar sheetRef={sheetRef} page={fields.page} fileStem={stem} title={title} ready={record !== null} />
+          <ExportBar
+            sheetRef={sheetRef}
+            page={fields.page}
+            fileStem={stem}
+            title={title}
+            ready={record !== null}
+            bookingId={record?.id}
+          />
 
           {record && (
             <div className="mt-4 flex flex-wrap gap-2">
