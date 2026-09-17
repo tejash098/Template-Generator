@@ -13,7 +13,7 @@ import { useSidebar } from '../layout/useSidebar'
  */
 export function AppShell() {
   const { isOpen, toggle } = useSidebar()
-  const { t } = useLocale()
+  const { locale, t } = useLocale()
 
   return (
     <div className={`app-shell page-gradient flex h-screen overflow-hidden bg-page-bg ${TRANSITION.COLORS_SLOW}`}>
@@ -47,8 +47,8 @@ export function AppShell() {
           </button>
           <span className="flex items-center gap-2">
             <Logo size={26} />
-            <span lang="hi" className="text-sm font-semibold text-text-primary">
-              {t('app.brandHindi')}
+            <span lang={locale} className="text-sm font-semibold text-text-primary">
+              {t('app.brand')}
             </span>
           </span>
           <span className="w-10" aria-hidden="true" />
