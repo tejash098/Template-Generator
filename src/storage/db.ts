@@ -99,6 +99,27 @@ export function createDb(name = 'srbs-letters'): AppDb {
           row.dirty = 1
         }),
     )
+  // v4: receipt template v2 — the single `place` becomes village/post/thana,
+  // plus return date, second phone and the issuing staff member's name.
+  db.version(4)
+    .stores({
+      bookings: 'id, seq, bookingDate, travelDate, updatedAt, dirty, deletedAt',
+      meta: 'key',
+    })
+    .upgrade((tx) =>
+      tx
+        .table('bookings')
+        .toCollection()
+        .modify((row: Partial<BookingRecord> & { place?: string }) => {
+          row.village = row.village ?? row.place ?? ''
+          delete row.place
+          row.post = row.post ?? ''
+          row.thana = row.thana ?? ''
+          row.returnDate = row.returnDate ?? ''
+          row.mobile2 = row.mobile2 ?? ''
+          row.issuedByName = row.issuedByName ?? ''
+        }),
+    )
   return db
 }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { AuthError, User } from '@supabase/supabase-js'
 import { db, setMeta } from '../storage/db'
 import { bookings } from '../storage/bookings'
+import { setIssuer } from '../storage/issuer'
 import { setNumberingMode } from '../storage/numbering'
 import { AuthContext, type AuthContextValue, type AuthStatus, type AuthUser, type TokenHashType } from './AuthContext'
 import type { CloudApi, Membership } from './cloudApi'
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     engineRef.current?.stop()
     engineRef.current = null
     setNumberingMode({ kind: 'local' })
+    setIssuer({ name: '' })
     syncStore.setState({ status: 'disabled', pendingCount: 0, error: null })
     setMembership(null)
     setDeviceCode(null)
@@ -73,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isOnline: () => navigator.onLine !== false,
         reserve: (size) => api.reserveBlock(deviceId, size),
       })
+      setIssuer({ name: m.displayName || authUser.email })
       engineRef.current?.stop()
       engineRef.current = createSyncEngine({ api, db, userId: authUser.id, organizationId: m.organizationId, deviceId })
       engineRef.current.start()

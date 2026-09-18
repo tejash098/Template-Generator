@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HINDI_ONES, amountToHindiWords, rupeesInWords } from './amountWords'
+import { HINDI_ONES, amountToHindiWords, rupeesInWords, rupeesOnly } from './amountWords'
 
 describe('amountToHindiWords', () => {
   it('has a unique name for every number 0–99', () => {
@@ -43,5 +43,9 @@ describe('amountToHindiWords', () => {
 
   it('formats the formal receipt phrase', () => {
     expect(rupeesInWords(15000)).toBe('पंद्रह हजार रुपये मात्र')
+  })
+
+  it('prefixes केवल for the bracketed amount on the pad', () => {
+    expect(rupeesOnly(10000)).toBe('केवल दस हजार रुपये मात्र')
   })
 })

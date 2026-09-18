@@ -13,20 +13,27 @@ export interface BookingContent {
   bookingNo: string
   /** ISO yyyy-mm-dd — the pad's top दिनांक. */
   bookingDate: string
-  /** ISO yyyy-mm-dd — when the receipt was generated (printed at the bottom). */
+  /** ISO yyyy-mm-dd — when the receipt was generated (printed under the staff signature). */
   issuedDate: string
+  /** Name of the signed-in staff member who issued it; '' when nobody was signed in. */
+  issuedByName: string
   name: string
-  place: string
+  village: string
+  post: string
+  thana: string
   from: string
   to: string
   /** ISO yyyy-mm-dd */
   travelDate: string
   /** HH:mm or '' */
   departureTime: string
+  /** ISO yyyy-mm-dd or '' */
+  returnDate: string
   returnTime: string
   fare: number
   advance: number
   mobile: string
+  mobile2: string
   bus: string
   padColor: PadColorId
 }
@@ -39,9 +46,12 @@ interface BookingSheetProps {
   ref?: Ref<HTMLDivElement>
 }
 
+const NBSP = ' '
+
 /**
  * One finished page: the fixed letterhead (in the chosen pad colour) + the
- * booking written as prose, mobile/bus lines, and the signature block. This
+ * booking written as prose + the customer's phones/bus line and two signature
+ * blocks (customer left, issuing staff right, with the issue date). This
  * element is what gets previewed, printed and exported; it is sized in CSS mm
  * and must never carry a CSS transform (the preview scales a wrapper).
  */
@@ -62,6 +72,8 @@ export function BookingSheet({ content, page, onFitChange, ref }: BookingSheetPr
     '--brand': PAD_COLORS[content.padColor].hex,
   } as CSSProperties
 
+  const phones = [content.mobile, content.mobile2].map((m) => m.trim()).filter(Boolean)
+
   return (
     <div className="sheet" style={style} ref={ref} lang="hi">
       <LetterheadHeader letterNo={content.bookingNo} date={formatDateDdMmYyyy(content.bookingDate)} />
@@ -70,21 +82,30 @@ export function BookingSheet({ content, page, onFitChange, ref }: BookingSheetPr
         <div className="lh-content" ref={contentRef}>
           <p className="lh-prose">{buildBookingProse(content)}</p>
 
-          <div className="lh-lines">
-            <div>
-              {BOOKING_TEXT.mobilePrefix} {content.mobile.trim() || '________'}
-            </div>
-            {content.bus.trim() && <div>{content.bus.trim()}</div>}
-          </div>
-
           <div className="lh-bottom">
-            <div className="lh-issued">
-              {BOOKING_TEXT.issuedLabel} {formatDateDdMmYyyy(content.issuedDate)}
+            <div className="lh-party">
+              <div className="lh-lines">
+                <div>
+                  {BOOKING_TEXT.mobilePrefix} {phones.length ? phones.join(', ') : '________'}
+                </div>
+                {content.bus.trim() && <div>{content.bus.trim()}</div>}
+              </div>
+              <div className="lh-signoff">
+                <div className="lh-sign-space" aria-hidden="true" />
+                <div className="lh-signatory">{content.name.trim() || NBSP}</div>
+                <div className="lh-sign-label">{BOOKING_TEXT.customerSignatureLabel}</div>
+              </div>
             </div>
-            <div className="lh-signoff">
-              <div className="lh-sign-space" aria-hidden="true" />
-              <div className="lh-signatory">{content.name.trim() || ' '}</div>
-              <div className="lh-sign-label">{BOOKING_TEXT.signatureLabel}</div>
+
+            <div className="lh-party lh-party-right">
+              <div className="lh-signoff">
+                <div className="lh-sign-space" aria-hidden="true" />
+                <div className="lh-signatory">{content.issuedByName.trim() || NBSP}</div>
+                <div className="lh-sign-label">{BOOKING_TEXT.issuerSignatureLabel}</div>
+              </div>
+              <div className="lh-issued">
+                {BOOKING_TEXT.issuedLabel} {formatDateDdMmYyyy(content.issuedDate)}
+              </div>
             </div>
           </div>
         </div>

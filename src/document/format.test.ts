@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fileStem, formatDateDdMmYyyy, formatRupees, todayIso } from './format'
+import { fileStem, formatDateDdMmYyyy, formatRupees, nextDayIso, todayIso } from './format'
 
 describe('dates', () => {
   it('formats ISO dates as dd/mm/yyyy', () => {
@@ -13,6 +13,15 @@ describe('dates', () => {
 
   it('builds today in local time', () => {
     expect(todayIso(new Date(2026, 0, 5))).toBe('2026-01-05')
+  })
+
+  it('finds the next day across month and year ends', () => {
+    expect(nextDayIso('2026-09-18')).toBe('2026-09-19')
+    expect(nextDayIso('2026-02-28')).toBe('2026-03-01')
+    expect(nextDayIso('2028-02-28')).toBe('2028-02-29')
+    expect(nextDayIso('2026-12-31')).toBe('2027-01-01')
+    expect(nextDayIso('')).toBe('')
+    expect(nextDayIso('18/09/2026')).toBe('')
   })
 })
 

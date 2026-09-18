@@ -59,17 +59,41 @@ export function BookingForm({ fields, bookingNo, hindiTyping, onChange }: Bookin
         />
       </Field>
 
-      <Field id="place" label={t('field.place')}>
-        <TransliterateInput
-          id="place"
-          className={HINDI_INPUT}
-          enabled={hindiTyping}
-          labels={xlitLabels}
-          value={fields.place}
-          onChange={(place) => onChange({ place })}
-          placeholder={t('field.placeholder.place')}
-        />
-      </Field>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field id="village" label={t('field.village')}>
+          <TransliterateInput
+            id="village"
+            className={HINDI_INPUT}
+            enabled={hindiTyping}
+            labels={xlitLabels}
+            value={fields.village}
+            onChange={(village) => onChange({ village })}
+            placeholder={t('field.placeholder.village')}
+          />
+        </Field>
+        <Field id="post" label={t('field.post')}>
+          <TransliterateInput
+            id="post"
+            className={HINDI_INPUT}
+            enabled={hindiTyping}
+            labels={xlitLabels}
+            value={fields.post}
+            onChange={(post) => onChange({ post })}
+            placeholder={t('field.placeholder.post')}
+          />
+        </Field>
+        <Field id="thana" label={t('field.thana')}>
+          <TransliterateInput
+            id="thana"
+            className={HINDI_INPUT}
+            enabled={hindiTyping}
+            labels={xlitLabels}
+            value={fields.thana}
+            onChange={(thana) => onChange({ thana })}
+            placeholder={t('field.placeholder.thana')}
+          />
+        </Field>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field id="from" label={t('field.from')}>
@@ -96,7 +120,7 @@ export function BookingForm({ fields, bookingNo, hindiTyping, onChange }: Bookin
         </Field>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field id="travelDate" label={t('field.travelDate')}>
           <input
             id="travelDate"
@@ -113,6 +137,15 @@ export function BookingForm({ fields, bookingNo, hindiTyping, onChange }: Bookin
             className={FORM.INPUT}
             value={fields.departureTime}
             onChange={(e) => onChange({ departureTime: e.target.value })}
+          />
+        </Field>
+        <Field id="returnDate" label={t('field.returnDate')}>
+          <input
+            id="returnDate"
+            type="date"
+            className={FORM.INPUT}
+            value={fields.returnDate}
+            onChange={(e) => onChange({ returnDate: e.target.value })}
           />
         </Field>
         <Field id="returnTime" label={t('field.returnTime')}>
@@ -158,17 +191,28 @@ export function BookingForm({ fields, bookingNo, hindiTyping, onChange }: Bookin
         </Field>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Field id="mobile" label={t('field.mobile')}>
           <input
             id="mobile"
             type="tel"
             inputMode="numeric"
-            pattern="[0-9]{10}"
-            maxLength={10}
+            maxLength={12}
             className={FORM.INPUT}
             value={fields.mobile}
             onChange={(e) => onChange({ mobile: e.target.value.replace(/\D/g, '') })}
+            placeholder={t('field.placeholder.mobile')}
+          />
+        </Field>
+        <Field id="mobile2" label={t('field.mobile2')}>
+          <input
+            id="mobile2"
+            type="tel"
+            inputMode="numeric"
+            maxLength={12}
+            className={FORM.INPUT}
+            value={fields.mobile2}
+            onChange={(e) => onChange({ mobile2: e.target.value.replace(/\D/g, '') })}
             placeholder={t('field.placeholder.mobile')}
           />
         </Field>

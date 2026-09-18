@@ -54,14 +54,16 @@ describe('bookingsRepo', () => {
   })
 
   it('lists newest first and searches across fields', async () => {
-    const first = await repo.create({ ...newBookingFields(), name: 'ओमप्रकाश पाल', place: 'भगवानपुर' })
+    const first = await repo.create({ ...newBookingFields(), name: 'ओमप्रकाश पाल', village: 'भगवानपुर', thana: 'दुर्गावती' })
     const second = await repo.create({ ...newBookingFields(), from: 'डहला', to: 'नौहट्टा', mobile: '8709544189' })
-    await repo.update(second.id, { ...newBookingFields(), from: 'डहला', to: 'नौहट्टा', mobile: '8709544189', bus: 'Star बस' })
+    await repo.update(second.id, { ...newBookingFields(), from: 'डहला', to: 'नौहट्टा', mobile: '8709544189', mobile2: '9431012345', bus: 'Star बस' })
 
     const all = await repo.list()
     expect(all.map((b) => b.id)).toEqual([second.id, first.id])
     expect((await repo.list('ओमप्रकाश')).map((b) => b.id)).toEqual([first.id])
     expect((await repo.list('भगवानपुर')).map((b) => b.id)).toEqual([first.id])
+    expect((await repo.list('दुर्गावती')).map((b) => b.id)).toEqual([first.id])
+    expect((await repo.list('94310')).map((b) => b.id)).toEqual([second.id])
     expect((await repo.list('नौहट्टा')).map((b) => b.id)).toEqual([second.id])
     expect((await repo.list('8709')).map((b) => b.id)).toEqual([second.id])
     expect((await repo.list('star')).map((b) => b.id)).toEqual([second.id])

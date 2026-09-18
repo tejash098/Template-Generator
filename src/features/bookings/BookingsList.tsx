@@ -95,9 +95,9 @@ export function BookingsList() {
                     <span lang="hi" className="font-hindi text-base">
                       {b.name || <em className="text-text-secondary">—</em>}
                     </span>
-                    {b.place && (
+                    {(b.village || b.thana) && (
                       <span lang="hi" className="font-hindi text-sm text-text-secondary">
-                        {b.place}
+                        {[b.village, b.thana].filter(Boolean).join(', ')}
                       </span>
                     )}
                   </div>

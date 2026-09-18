@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { EDITOR } from '../../config/constants'
 import type { BookingContent } from '../../document/BookingSheet'
-import { fileStem, formatDateDdMmYyyy, todayIso } from '../../document/format'
+import { fileStem, formatDateDdMmYyyy, nextDayIso, todayIso } from '../../document/format'
 import { isPadColorId } from '../../document/padColors'
 import { FIT_WARN_SCALE } from '../../document/useFitText'
 import { useLocale } from '../../i18n/useLocale'
@@ -178,7 +178,14 @@ export function BookingEditor() {
   const update = (patch: Partial<BookingFields>) => {
     dirtyRef.current = true
     setPendingEdits(true)
-    setFields((prev) => ({ ...prev, ...patch }))
+    setFields((prev) => {
+      const next = { ...prev, ...patch }
+      // A return date that was still "the day after" follows the travel date.
+      if (patch.travelDate !== undefined && prev.returnDate === nextDayIso(prev.travelDate)) {
+        next.returnDate = nextDayIso(patch.travelDate)
+      }
+      return next
+    })
   }
 
   const handleDuplicate = async () => {
