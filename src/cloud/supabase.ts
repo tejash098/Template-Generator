@@ -3,6 +3,8 @@ import type { Database } from './database.types'
 
 export type AppSupabaseClient = SupabaseClient<Database>
 
+// Both are injected by `define` in vite.config.ts, which resolves them from
+// VITE_* / SUPABASE_* / NEXT_PUBLIC_* names at build time ('' when unset).
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
 
