@@ -9,7 +9,7 @@ interface PadColorSwatchesProps {
   size?: 'sm' | 'lg'
 }
 
-/** Round colour swatches for the pad ink colour. */
+/** Round colour swatches for the pad ink colour; the blank pad is a white disc. */
 export function PadColorSwatches({ value, onChange, size = 'sm' }: PadColorSwatchesProps) {
   const { t } = useLocale()
   const dim = size === 'lg' ? 'h-12 w-12' : 'h-8 w-8'
@@ -18,6 +18,7 @@ export function PadColorSwatches({ value, onChange, size = 'sm' }: PadColorSwatc
       {PAD_COLOR_IDS.map((id) => {
         const active = id === value
         const label = t(`padColor.${id}`)
+        const pad = PAD_COLORS[id]
         return (
           <button
             key={id}
@@ -27,10 +28,10 @@ export function PadColorSwatches({ value, onChange, size = 'sm' }: PadColorSwatc
             aria-label={label}
             title={label}
             onClick={() => onChange(id)}
-            style={{ backgroundColor: PAD_COLORS[id].hex }}
-            className={`flex items-center justify-center rounded-full text-white shadow-sm ring-offset-2 ring-offset-surface transition-transform hover:scale-105 ${dim} ${
-              active ? 'ring-2 ring-accent' : ''
-            } ${A11Y.FOCUS_RING}`}
+            style={pad.preprinted ? { backgroundColor: '#fff', color: pad.hex } : { backgroundColor: pad.hex }}
+            className={`flex items-center justify-center rounded-full shadow-sm ring-offset-2 ring-offset-surface transition-transform hover:scale-105 ${dim} ${
+              pad.preprinted ? 'border border-border' : 'text-white'
+            } ${active ? 'ring-2 ring-accent' : ''} ${A11Y.FOCUS_RING}`}
           >
             {active && <Check size={size === 'lg' ? 22 : 16} strokeWidth={3} aria-hidden="true" />}
           </button>

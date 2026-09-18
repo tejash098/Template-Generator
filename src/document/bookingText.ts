@@ -1,4 +1,4 @@
-import { rupeesOnly } from './amountWords'
+import { rupeesInWords } from './amountWords'
 import { formatDateDdMmYyyy, formatRupees, nextDayIso } from './format'
 import { formatTimeHindi } from './hindiTime'
 
@@ -6,8 +6,8 @@ import { formatTimeHindi } from './hindiTime'
  * The booking receipt as the operator writes it on the pad, e.g.
  *   मैं तेजस कुमार सिंह ग्राम केखड़ा थाना भभुआ का रहने वाला हूँ। दिनांक 18/09/2026 के
  *   शाम 4 बजे भभुआ से बिहार जाना है। अगले दिन दिनांक 19/09/2026 सुबह 6 बजे वापस
- *   आना है। बस का किराया 10000/- (केवल दस हजार रुपये मात्र) तय है। बयाना 2000/-
- *   (केवल दो हजार रुपये मात्र) प्राप्त है। बाकी 8000/- (केवल आठ हजार रुपये मात्र)।
+ *   आना है। बस का किराया 10000/- (दस हजार रुपये मात्र) तय है। बयाना 2000/-
+ *   (दो हजार रुपये मात्र) प्राप्त है। बाकी 8000/- (आठ हजार रुपये मात्र)।
  * Empty fields print as pen blanks so an incomplete receipt still reads sensibly.
  */
 
@@ -40,7 +40,7 @@ export interface BookingProseInput extends BookingAmounts {
   returnTime: string
 }
 
-const amount = (n: number): string => `${formatRupees(n)} (${rupeesOnly(n)})`
+const amount = (n: number): string => `${formatRupees(n)} (${rupeesInWords(n)})`
 
 export function buildBookingProse(c: BookingProseInput): string {
   const sentences: string[] = []

@@ -120,6 +120,29 @@ export function supabaseCloud(client: AppSupabaseClient): CloudApi {
       if (error) throw error
     },
 
+    async updateMember(input) {
+      const { error } = await client.rpc('update_member', {
+        p_organization_id: input.organizationId,
+        p_user_id: input.userId,
+        p_display_name: input.displayName,
+        p_role: input.role,
+      })
+      if (error) throw error
+    },
+
+    async removeMember(organizationId, userId) {
+      // PostgREST deletes nothing and reports success when RLS hides the row,
+      // so ask for the deleted row back and treat "none" as a failure.
+      const { data, error } = await client
+        .from('memberships')
+        .delete()
+        .eq('organization_id', organizationId)
+        .eq('user_id', userId)
+        .select('user_id')
+      if (error) throw error
+      if (!data?.length) throw new Error('membership not found or not permitted')
+    },
+
     async invite(input) {
       const { data, error } = await client.functions.invoke<{ ok: boolean; error?: string }>('invite-staff', {
         body: { email: input.email, displayName: input.displayName, role: input.role },

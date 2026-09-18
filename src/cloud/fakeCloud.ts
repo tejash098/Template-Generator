@@ -91,6 +91,8 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
       return []
     },
     async revokeMember() {},
+    async updateMember() {},
+    async removeMember() {},
     async invite() {},
   }
   return api

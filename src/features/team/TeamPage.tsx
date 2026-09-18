@@ -1,4 +1,4 @@
-import { UserPlus } from 'lucide-react'
+import { Pencil, UserPlus } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import type { Member, MembershipRole } from '../../cloud/cloudApi'
@@ -7,13 +7,14 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Field } from '../../components/ui/Field'
+import { Modal } from '../../components/ui/Modal'
 import { FORM, ICON_SIZE } from '../../config/constants'
 import { useLocale } from '../../i18n/useLocale'
 import { PageLayout } from '../../layouts/PageLayout'
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
-/** Owner-only: invite staff and revoke access. */
+/** Owner-only: invite staff, edit a member's name and role, revoke access, remove from the team. */
 export function TeamPage() {
   const { status, user, membership, isOwner, api } = useAuth()
   const { t } = useLocale()
@@ -25,6 +26,13 @@ export function TeamPage() {
   const [sending, setSending] = useState(false)
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
   const [revoking, setRevoking] = useState<Member | null>(null)
+  const [removing, setRemoving] = useState<Member | null>(null)
+  const [editing, setEditing] = useState<Member | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editRole, setEditRole] = useState<MembershipRole>('staff')
+  const [saving, setSaving] = useState(false)
+  // Stable: Modal re-runs its focus effect whenever onClose changes identity.
+  const closeEdit = useCallback(() => setEditing(null), [])
 
   const organizationId = membership?.organizationId
   const [reloadKey, setReloadKey] = useState(0)
@@ -89,6 +97,47 @@ export function TeamPage() {
     }
   }
 
+  const remove = async () => {
+    if (!removing) return
+    const target = removing
+    setRemoving(null)
+    try {
+      await api.removeMember(membership.organizationId, target.userId)
+      setNotice({ tone: 'ok', text: t('team.removed', { name: target.displayName || target.email }) })
+      load()
+    } catch (err) {
+      setNotice({ tone: 'error', text: errorText(err) })
+    }
+  }
+
+  const openEdit = (m: Member) => {
+    setEditName(m.displayName)
+    setEditRole(m.role)
+    setEditing(m)
+  }
+
+  const saveEdit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!editing) return
+    const target = editing
+    setSaving(true)
+    try {
+      await api.updateMember({
+        organizationId: membership.organizationId,
+        userId: target.userId,
+        displayName: editName.trim(),
+        role: editRole,
+      })
+      setNotice({ tone: 'ok', text: t('team.edit.saved', { name: editName.trim() || target.email }) })
+      closeEdit()
+      load()
+    } catch (err) {
+      setNotice({ tone: 'error', text: t('team.edit.failed', { error: errorText(err) }) })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <PageLayout title={t('team.title')} subtitle={t('team.subtitle')}>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
@@ -142,10 +191,20 @@ export function TeamPage() {
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`}>
                       {active ? t('team.status.active') : t('team.status.revoked')}
                     </span>
-                    {!isSelf && active && (
-                      <Button size="sm" variant="danger" onClick={() => setRevoking(m)}>
-                        {t('team.revoke')}
-                      </Button>
+                    {!isSelf && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button size="sm" icon={<Pencil size={14} aria-hidden="true" />} onClick={() => openEdit(m)}>
+                          {t('team.edit')}
+                        </Button>
+                        {active && (
+                          <Button size="sm" onClick={() => setRevoking(m)}>
+                            {t('team.revoke')}
+                          </Button>
+                        )}
+                        <Button size="sm" variant="danger" onClick={() => setRemoving(m)}>
+                          {t('team.remove')}
+                        </Button>
+                      </div>
                     )}
                   </li>
                 )
@@ -164,6 +223,39 @@ export function TeamPage() {
         onConfirm={revoke}
         onCancel={() => setRevoking(null)}
       />
+
+      <ConfirmDialog
+        open={removing !== null}
+        title={t('team.removeTitle')}
+        message={t('team.removeConfirm', { name: removing?.displayName || removing?.email || '' })}
+        confirmLabel={t('team.remove')}
+        danger
+        onConfirm={remove}
+        onCancel={() => setRemoving(null)}
+      />
+
+      <Modal open={editing !== null} onClose={closeEdit} title={t('team.edit.title')}>
+        <form className="flex flex-col gap-4" onSubmit={saveEdit}>
+          <p className="truncate text-xs text-text-secondary">{editing?.email}</p>
+          <Field id="edit-name" label={t('team.invite.name')}>
+            <input id="edit-name" type="text" className={FORM.INPUT} value={editName} onChange={(e) => setEditName(e.target.value)} />
+          </Field>
+          <Field id="edit-role" label={t('team.invite.role')} hint={t('team.edit.roleNote')}>
+            <select id="edit-role" className={FORM.INPUT} value={editRole} onChange={(e) => setEditRole(e.target.value as MembershipRole)}>
+              <option value="staff">{t('account.role.staff')}</option>
+              <option value="owner">{t('account.role.owner')}</option>
+            </select>
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" onClick={closeEdit}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" variant="primary" disabled={saving}>
+              {saving ? t('team.edit.working') : t('team.edit.save')}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </PageLayout>
   )
 }

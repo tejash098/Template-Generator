@@ -180,9 +180,13 @@
   color: var(--brand);
 }
 
-.lh-issued {
-  font-size: 0.9em;
-  color: var(--ink);
+/* Right column: booking date over the issuing staff member's name. */
+.lh-issuer {
+  gap: 0.2em;
+}
+
+.lh-issuer-name {
+  font-weight: 700;
 }
 
 /* ---- Letterhead footer --------------------------------------------------- */
@@ -199,4 +203,20 @@
 
 .lh-foot p {
   margin: 0;
+}
+
+/* ---- Blank (pre-printed) pad -------------------------------------------- */
+/* The physical pad already carries the artwork, address band, labels and
+   footer notes. Their boxes stay (visibility, never display) so every value
+   and the fit-to-page scale are identical to the coloured version. */
+.sheet-preprinted .lh-topline,
+.sheet-preprinted .lh-title-row,
+.sheet-preprinted .lh-address,
+.sheet-preprinted .lh-meta-label,
+.sheet-preprinted .lh-foot {
+  visibility: hidden;
+}
+
+.sheet-preprinted .lh-meta-value {
+  border-bottom-color: transparent; /* the pad has its own dotted line */
 }

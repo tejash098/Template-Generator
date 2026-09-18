@@ -57,5 +57,9 @@ export interface CloudApi {
   signedUrl(path: string, expiresInSeconds: number): Promise<string>
   listMembers(organizationId: string): Promise<Member[]>
   revokeMember(organizationId: string, userId: string): Promise<void>
+  /** Owner edits another member's printed name and role (RPC `update_member`). */
+  updateMember(input: { organizationId: string; userId: string; displayName: string; role: MembershipRole }): Promise<void>
+  /** Owner deletes another member's membership row; their login and bookings stay. */
+  removeMember(organizationId: string, userId: string): Promise<void>
   invite(input: { email: string; displayName: string; role: MembershipRole }): Promise<void>
 }

@@ -20,6 +20,4 @@ export const LETTERHEAD = {
 export const BOOKING_TEXT = {
   mobilePrefix: 'मो.-',
   customerSignatureLabel: 'हस्ताक्षर (यात्री)',
-  issuerSignatureLabel: 'हस्ताक्षर (श्री राम बस सर्विस)',
-  issuedLabel: 'जारी दिनांक :',
 } as const

@@ -8,11 +8,8 @@ import type { TemplateId } from '../templates/ids'
  * rendered PDF/PNG — documents are regenerated on demand from these records.
  * The shape is flat and JSON-friendly; cloud/mapping.ts translates it to the
  * Supabase `bookings` row (snake_case) and back.
- *
- * `issuedDate` (printed as जारी दिनांक) is not stored: it is derived from
- * `createdAt` at render time so a receipt keeps its date when re-exported.
  */
-export interface BookingRecord extends Omit<BookingContent, 'issuedDate'> {
+export interface BookingRecord extends BookingContent {
   id: string
   /** Numeric sequence behind `bookingNo`; null for provisional (offline) numbers like `B/0007`. */
   seq: number | null

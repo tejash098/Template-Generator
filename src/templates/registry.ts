@@ -40,7 +40,6 @@ const busBooking: TemplateDef = {
   sampleContent: (padColor) => ({
     bookingNo: '0001',
     bookingDate: todayIso(),
-    issuedDate: todayIso(),
     issuedByName: 'वशिष्ठ नारायण सिंह',
     name: 'तेजस कुमार सिंह',
     village: 'केखड़ा',
