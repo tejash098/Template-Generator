@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../cloud/useAuth'
 import { A11Y, ICON_SIZE, TRANSITION } from '../../config/constants'
 import { NAV_ITEMS } from '../../config/navItems'
 import { useLocale } from '../../i18n/useLocale'
@@ -8,17 +9,18 @@ import { useSidebar } from '../../layout/useSidebar'
 import { LanguageToggle } from '../ui/LanguageToggle'
 import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
+import { AccountPanel } from './AccountPanel'
 import { NavItem } from './NavItem'
 
-/** Brand lockup: logo + Hindi wordmark (wordmark hidden when collapsed). */
+/** Brand lockup: logo + wordmark in the UI language (wordmark hidden when collapsed). */
 function Brand({ showWordmark }: { showWordmark: boolean }) {
-  const { t } = useLocale()
+  const { locale, t } = useLocale()
   return (
-    <Link to="/" className={`flex min-w-0 items-center gap-2.5 rounded-lg ${A11Y.FOCUS_RING}`} title={t('app.brand')}>
+    <Link to="/templates" className={`flex min-w-0 items-center gap-2.5 rounded-lg ${A11Y.FOCUS_RING}`} title={t('app.brand')}>
       <Logo size={28} />
       {showWordmark && (
-        <span lang="hi" className="truncate text-sm font-semibold text-text-primary">
-          {t('app.brandHindi')}
+        <span lang={locale} className="truncate text-sm font-semibold text-text-primary">
+          {t('app.brand')}
         </span>
       )}
     </Link>
@@ -29,6 +31,8 @@ function Brand({ showWordmark }: { showWordmark: boolean }) {
 export function Sidebar() {
   const { isOpen, toggle, close } = useSidebar()
   const { t } = useLocale()
+  const { isOwner } = useAuth()
+  const items = NAV_ITEMS.filter((item) => !item.ownerOnly || isOwner)
 
   // On phones the sidebar is a drawer; close it after navigating.
   const handleNavClick = () => {
@@ -59,13 +63,14 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto py-4" onClick={handleNavClick}>
-        {NAV_ITEMS.map(({ id, icon, labelKey, path, end }) => (
+        {items.map(({ id, icon, labelKey, path, end }) => (
           <NavItem key={id} icon={icon} label={t(labelKey)} path={path} end={end} isOpen={isOpen} />
         ))}
       </nav>
 
       <div className="shrink-0 border-t border-border px-3 py-3">
-        <div className={isOpen ? 'flex items-center justify-between gap-2' : 'flex flex-col items-center gap-2'}>
+        <AccountPanel compact={!isOpen} />
+        <div className={`mt-2 ${isOpen ? 'flex items-center justify-between gap-2' : 'flex flex-col items-center gap-2'}`}>
           <ThemeToggle compact={!isOpen} />
           <LanguageToggle compact={!isOpen} />
         </div>

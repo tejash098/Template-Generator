@@ -10,6 +10,7 @@ import '@fontsource/rozha-one/400.css'
 import './index.css'
 import './styles/print.css'
 import App from './App'
+import { AuthProvider } from './cloud/AuthProvider'
 import { LocaleProvider } from './i18n/LocaleProvider'
 import { SidebarProvider } from './layout/SidebarProvider'
 import { ThemeProvider } from './theme/ThemeProvider'
@@ -19,7 +20,9 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <LocaleProvider>
         <SidebarProvider>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </SidebarProvider>
       </LocaleProvider>
     </ThemeProvider>

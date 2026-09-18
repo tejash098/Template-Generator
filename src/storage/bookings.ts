@@ -1,11 +1,15 @@
 import { todayIso } from '../document/format'
-import { formatLetterNo } from '../document/letterNo'
 import { DEFAULT_PAD_COLOR, type PadColorId } from '../document/padColors'
 import { DEFAULT_PAGE } from '../document/pageSizes'
 import { db as defaultDb, type AppDb, type BookingRecord } from './db'
+import { emitBookingsChanged } from './events'
+import { allocateBookingNo, prepareNumbers } from './numbering'
 
 /** The user-editable part of a booking (everything except identity/bookkeeping). */
-export type BookingFields = Omit<BookingRecord, 'id' | 'seq' | 'bookingNo' | 'createdAt' | 'updatedAt'>
+export type BookingFields = Omit<
+  BookingRecord,
+  'id' | 'seq' | 'bookingNo' | 'createdAt' | 'updatedAt' | 'dirty' | 'deletedAt' | 'syncedAt' | 'organizationId' | 'createdBy'
+>
 
 export function newBookingFields(init: Partial<BookingFields> = {}): BookingFields {
   const today = todayIso()
@@ -29,7 +33,7 @@ export function newBookingFields(init: Partial<BookingFields> = {}): BookingFiel
   }
 }
 
-function newId(): string {
+export function newId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
@@ -53,46 +57,44 @@ const searchable = (b: BookingRecord): string[] => [
 ]
 
 /**
- * Repository for bookings. Takes an optional `db` so tests can run against an
- * isolated database.
+ * Repository for bookings. Every write marks the row `dirty` for the sync
+ * engine and announces itself through storage/events.ts. Takes an optional
+ * `db` so tests can run against an isolated database.
  */
 export function bookingsRepo(db: AppDb = defaultDb) {
-  /** Reserve the next पत्रांक. Must run inside a transaction covering `meta`. */
-  async function allocateSeq(): Promise<{ seq: number; bookingNo: string }> {
-    const next = await db.meta.get('nextSeq')
-    const prefix = await db.meta.get('letterNoPrefix')
-    const seq = typeof next?.value === 'number' ? next.value : 1
-    await db.meta.put({ key: 'nextSeq', value: seq + 1 })
-    return { seq, bookingNo: formatLetterNo(seq, typeof prefix?.value === 'string' ? prefix.value : '') }
-  }
-
-  /** Create a booking and assign it the next sequential number. */
-  function create(fields: BookingFields = newBookingFields()): Promise<BookingRecord> {
-    return db.transaction('rw', db.bookings, db.meta, async () => {
-      const { seq, bookingNo } = await allocateSeq()
+  /** Create a booking and assign it the next number (see storage/numbering.ts). */
+  async function create(fields: BookingFields = newBookingFields()): Promise<BookingRecord> {
+    await prepareNumbers(db) // network, so outside the transaction
+    const record = await db.transaction('rw', db.bookings, db.meta, async () => {
+      const { seq, bookingNo } = await allocateBookingNo(db)
       const now = Date.now()
-      const record: BookingRecord = { id: newId(), seq, bookingNo, ...fields, createdAt: now, updatedAt: now }
-      await db.bookings.add(record)
-      return record
+      const row: BookingRecord = { id: newId(), seq, bookingNo, ...fields, createdAt: now, updatedAt: now, dirty: 1 }
+      await db.bookings.add(row)
+      return row
     })
+    emitBookingsChanged()
+    return record
   }
 
   return {
     create,
 
-    get(id: string): Promise<BookingRecord | undefined> {
-      return db.bookings.get(id)
+    /** Deleted rows are reported as missing. */
+    async get(id: string): Promise<BookingRecord | undefined> {
+      const row = await db.bookings.get(id)
+      return row && !row.deletedAt ? row : undefined
     },
 
     /** Overwrite the editable fields; identity and sequence never change. */
     async update(id: string, fields: BookingFields): Promise<void> {
-      const changed = await db.bookings.update(id, { ...fields, updatedAt: Date.now() })
+      const changed = await db.bookings.update(id, { ...fields, updatedAt: Date.now(), dirty: 1 })
       if (!changed) throw new Error(`Booking ${id} not found`)
+      emitBookingsChanged()
     },
 
-    /** Newest first, optionally filtered by a free-text query. */
+    /** Newest first, optionally filtered by a free-text query; never deleted rows. */
     async list(query = ''): Promise<BookingRecord[]> {
-      const all = await db.bookings.orderBy('updatedAt').reverse().toArray()
+      const all = (await db.bookings.orderBy('updatedAt').reverse().toArray()).filter((b) => !b.deletedAt)
       const q = query.trim().toLowerCase()
       if (!q) return all
       return all.filter((b) => searchable(b).some((v) => v.toLowerCase().includes(q)))
@@ -101,14 +103,26 @@ export function bookingsRepo(db: AppDb = defaultDb) {
     /** Start a fresh booking (new number, today's booking date) with the same content. */
     async duplicate(id: string): Promise<BookingRecord> {
       const source = await db.bookings.get(id)
-      if (!source) throw new Error(`Booking ${id} not found`)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id: _id, seq: _seq, bookingNo: _no, createdAt: _c, updatedAt: _u, ...fields } = source
-      return create({ ...fields, bookingDate: todayIso() })
+      if (!source || source.deletedAt) throw new Error(`Booking ${id} not found`)
+      const {
+        template, name, place, from, to, travelDate, departureTime, returnTime, fare, advance, mobile, bus, padColor, page,
+      } = source
+      return create({
+        template, name, place, from, to, travelDate, departureTime, returnTime, fare, advance, mobile, bus, padColor, page,
+        bookingDate: todayIso(),
+      })
     },
 
-    remove(id: string): Promise<void> {
-      return db.bookings.delete(id)
+    /** Soft delete so the deletion reaches other devices. */
+    async remove(id: string): Promise<void> {
+      const now = Date.now()
+      await db.bookings.update(id, { deletedAt: now, updatedAt: now, dirty: 1 })
+      emitBookingsChanged()
+    },
+
+    /** Rows waiting to be pushed. */
+    pendingCount(): Promise<number> {
+      return db.bookings.where('dirty').equals(1).count()
     },
   }
 }

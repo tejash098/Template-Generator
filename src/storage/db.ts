@@ -6,25 +6,55 @@ import type { TemplateId } from '../templates/ids'
 /**
  * Local-first store. We persist the FORM DATA of each booking, never the
  * rendered PDF/PNG — documents are regenerated on demand from these records.
- * The shape is flat, JSON-friendly and indexable so it can later be mirrored
- * to Supabase without translation.
+ * The shape is flat and JSON-friendly; cloud/mapping.ts translates it to the
+ * Supabase `bookings` row (snake_case) and back.
  *
  * `issuedDate` (printed as जारी दिनांक) is not stored: it is derived from
  * `createdAt` at render time so a receipt keeps its date when re-exported.
  */
 export interface BookingRecord extends Omit<BookingContent, 'issuedDate'> {
   id: string
-  /** Numeric sequence behind `bookingNo` (पत्रांक). */
-  seq: number
+  /** Numeric sequence behind `bookingNo`; null for provisional (offline) numbers like `B/0007`. */
+  seq: number | null
   template: TemplateId
   page: PageSpec
   createdAt: number
   updatedAt: number
+  /** 1 = changed locally since the last successful push. Indexed for the sync engine. */
+  dirty: 0 | 1
+  /** Soft delete (epoch ms); lists hide these rows, sync propagates them. */
+  deletedAt?: number
+  syncedAt?: number
+  organizationId?: string
+  createdBy?: string
+  sharePdfPath?: string
+  sharePngPath?: string
+  shareRenderedAt?: number
 }
 
-export interface MetaRecord {
-  key: 'nextSeq' | 'letterNoPrefix'
-  value: number | string
+/** A block of booking numbers reserved from the server for this device. */
+export interface NumberBlock {
+  start: number
+  end: number
+  next: number
+}
+
+/** Small settings table; each key has its own value type. */
+export interface MetaValues {
+  nextSeq: number
+  letterNoPrefix: string
+  deviceId: string
+  deviceCode: string
+  organizationId: string
+  numberBlocks: NumberBlock[]
+  provisionalCounter: number
+  syncCursor: string
+}
+export type MetaKey = keyof MetaValues
+
+export interface MetaRecord<K extends MetaKey = MetaKey> {
+  key: K
+  value: MetaValues[K]
 }
 
 export type AppDb = Dexie & {
@@ -32,9 +62,18 @@ export type AppDb = Dexie & {
   meta: EntityTable<MetaRecord, 'key'>
 }
 
+export async function getMeta<K extends MetaKey>(db: AppDb, key: K): Promise<MetaValues[K] | undefined> {
+  const row = (await db.meta.get(key)) as MetaRecord<K> | undefined
+  return row?.value
+}
+
+export async function setMeta<K extends MetaKey>(db: AppDb, key: K, value: MetaValues[K]): Promise<void> {
+  await db.meta.put({ key, value } as MetaRecord)
+}
+
 export function createDb(name = 'srbs-letters'): AppDb {
   const db = new Dexie(name) as AppDb
-  // v1 held the provisional letter form. v2 drops it and adds bookings; the
+  // v1 held the provisional letter form. v2 replaced it with bookings; the
   // meta table (and with it the पत्रांक sequence) carries over untouched.
   db.version(1).stores({
     letters: 'id, seq, date, updatedAt',
@@ -45,6 +84,21 @@ export function createDb(name = 'srbs-letters'): AppDb {
     bookings: 'id, seq, bookingDate, travelDate, updatedAt',
     meta: 'key',
   })
+  // v3: sync bookkeeping. Every existing row becomes dirty so it uploads on
+  // the first sign-in.
+  db.version(3)
+    .stores({
+      bookings: 'id, seq, bookingDate, travelDate, updatedAt, dirty, deletedAt',
+      meta: 'key',
+    })
+    .upgrade((tx) =>
+      tx
+        .table('bookings')
+        .toCollection()
+        .modify((row: Partial<BookingRecord>) => {
+          row.dirty = 1
+        }),
+    )
   return db
 }
 

@@ -21,7 +21,7 @@ export function TemplateStart() {
   const tpl = isTemplateId(templateId) ? TEMPLATES[templateId] : null
   const [color, setColor] = useState<PadColorId>(tpl?.defaultPadColor ?? 'navy')
 
-  if (!tpl) return <Navigate to="/" replace />
+  if (!tpl) return <Navigate to="/templates" replace />
 
   return (
     <PageLayout
@@ -29,7 +29,7 @@ export function TemplateStart() {
       subtitle={t('start.subtitle')}
       documentTitle={pick(tpl.name, locale)}
       actions={
-        <Button to="/" icon={<ArrowLeft size={ICON_SIZE.SM} aria-hidden="true" />}>
+        <Button to="/templates" icon={<ArrowLeft size={ICON_SIZE.SM} aria-hidden="true" />}>
           {t('start.back')}
         </Button>
       }
