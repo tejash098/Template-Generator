@@ -6,6 +6,7 @@ dist-ssr
 .DS_Store
 *.log
 .vite
+.vscode/
 
 # Local AI/editor metadata
 CLAUDE.md
