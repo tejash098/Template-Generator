@@ -24,7 +24,7 @@ export function TemplateGallery() {
           >
             <Card className={`flex h-full flex-col gap-4 p-4 hover:border-accent ${TRANSITION.COLORS}`}>
               <div className="overflow-hidden rounded-lg bg-page-bg p-3">
-                <SheetThumbnail content={tpl.sampleContent(tpl.defaultPadColor)} />
+                <SheetThumbnail content={tpl.sampleContent(tpl.defaultPadColor)} themed />
               </div>
               <div className="flex flex-1 flex-col gap-1">
                 <h2 className="text-base font-semibold text-text-primary">

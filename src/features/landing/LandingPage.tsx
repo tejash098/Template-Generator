@@ -86,7 +86,7 @@ export function LandingPage() {
             </div>
           </div>
           <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-surface p-3 shadow-xl lg:rotate-1">
-            <SheetThumbnail content={template.sampleContent(template.defaultPadColor)} />
+            <SheetThumbnail content={template.sampleContent(template.defaultPadColor)} themed />
           </div>
         </section>
 
