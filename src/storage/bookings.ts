@@ -7,6 +7,12 @@ import { getIssuer } from './issuer'
 import { allocateBookingNo, prepareNumbers } from './numbering'
 
 /** The user-editable part of a booking (everything except identity/bookkeeping). */
+/** Inclusive ISO date bounds on `travelDate`; an empty/missing end is open. */
+export interface TravelDateRange {
+  from?: string
+  to?: string
+}
+
 export type BookingFields = Omit<
   BookingRecord,
   'id' | 'seq' | 'bookingNo' | 'createdAt' | 'updatedAt' | 'dirty' | 'deletedAt' | 'syncedAt' | 'organizationId' | 'createdBy'
@@ -101,12 +107,18 @@ export function bookingsRepo(db: AppDb = defaultDb) {
       emitBookingsChanged()
     },
 
-    /** Newest first, optionally filtered by a free-text query; never deleted rows. */
-    async list(query = ''): Promise<BookingRecord[]> {
+    /**
+     * Newest first, optionally filtered by a free-text query and/or a travel-date
+     * range (ISO, inclusive, either end open); never deleted rows. Rows without a
+     * travel date are left out while a date filter is active.
+     */
+    async list(query = '', range: TravelDateRange = {}): Promise<BookingRecord[]> {
       const all = (await db.bookings.orderBy('updatedAt').reverse().toArray()).filter((b) => !b.deletedAt)
       const q = query.trim().toLowerCase()
-      if (!q) return all
-      return all.filter((b) => searchable(b).some((v) => v.toLowerCase().includes(q)))
+      const matched = q ? all.filter((b) => searchable(b).some((v) => v.toLowerCase().includes(q))) : all
+      const { from, to } = range
+      if (!from && !to) return matched
+      return matched.filter((b) => b.travelDate && (!from || b.travelDate >= from) && (!to || b.travelDate <= to))
     },
 
     /** Start a fresh booking (new number, today's booking date) with the same content. */

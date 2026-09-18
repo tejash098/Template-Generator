@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fileStem, formatDateDdMmYyyy, formatRupees, nextDayIso, todayIso } from './format'
+import { fileStem, formatDateDdMmYyyy, formatRupees, monthRangeIso, nextDayIso, todayIso } from './format'
 
 describe('dates', () => {
   it('formats ISO dates as dd/mm/yyyy', () => {
@@ -22,6 +22,16 @@ describe('dates', () => {
     expect(nextDayIso('2026-12-31')).toBe('2027-01-01')
     expect(nextDayIso('')).toBe('')
     expect(nextDayIso('18/09/2026')).toBe('')
+  })
+
+  it('spans a whole month, including February and leap years', () => {
+    expect(monthRangeIso('2026-09')).toEqual({ from: '2026-09-01', to: '2026-09-30' })
+    expect(monthRangeIso('2026-02')).toEqual({ from: '2026-02-01', to: '2026-02-28' })
+    expect(monthRangeIso('2028-02')).toEqual({ from: '2028-02-01', to: '2028-02-29' })
+    expect(monthRangeIso('2026-12')).toEqual({ from: '2026-12-01', to: '2026-12-31' })
+    expect(monthRangeIso('')).toBeUndefined()
+    expect(monthRangeIso('2026-13')).toBeUndefined()
+    expect(monthRangeIso('09/2026')).toBeUndefined()
   })
 })
 

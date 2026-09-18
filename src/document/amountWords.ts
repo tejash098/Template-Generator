@@ -37,8 +37,5 @@ export function amountToHindiWords(n: number): string {
   return parts.join(' ')
 }
 
-/** Formal variant: "पंद्रह हजार रुपये मात्र". */
+/** Receipt phrase, bracketed after the figure: "पंद्रह हजार रुपये मात्र". */
 export const rupeesInWords = (n: number): string => `${amountToHindiWords(n)} रुपये मात्र`
-
-/** Receipt variant, bracketed after the figure: "केवल पंद्रह हजार रुपये मात्र". */
-export const rupeesOnly = (n: number): string => `केवल ${rupeesInWords(n)}`

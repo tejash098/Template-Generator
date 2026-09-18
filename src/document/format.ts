@@ -15,6 +15,16 @@ export function nextDayIso(iso: string): string {
   return todayIso(d)
 }
 
+/** First and last day of a `yyyy-mm` month as ISO dates (local time); undefined when malformed. */
+export function monthRangeIso(month: string): { from: string; to: string } | undefined {
+  const m = /^(\d{4})-(\d{2})$/.exec(month)
+  if (!m) return undefined
+  const y = Number(m[1])
+  const mo = Number(m[2])
+  if (mo < 1 || mo > 12) return undefined
+  return { from: `${m[1]}-${m[2]}-01`, to: todayIso(new Date(y, mo, 0)) }
+}
+
 export function formatDateDdMmYyyy(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
   if (!m) return iso

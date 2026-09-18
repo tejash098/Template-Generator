@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { EDITOR } from '../../config/constants'
 import type { BookingContent } from '../../document/BookingSheet'
-import { fileStem, formatDateDdMmYyyy, nextDayIso, todayIso } from '../../document/format'
+import { fileStem, formatDateDdMmYyyy, nextDayIso } from '../../document/format'
 import { isPadColorId } from '../../document/padColors'
 import { FIT_WARN_SCALE } from '../../document/useFitText'
 import { useLocale } from '../../i18n/useLocale'
@@ -58,8 +58,6 @@ export function BookingEditor() {
   const [pendingEdits, setPendingEdits] = useState(false)
   // updatedAt of the stored row the form currently reflects.
   const [appliedUpdatedAt, setAppliedUpdatedAt] = useState(0)
-  // जारी दिनांक for an unsaved draft; saved bookings use their createdAt.
-  const [draftIssuedDate] = useState(() => todayIso())
 
   const sheetRef = useRef<HTMLDivElement>(null)
   const recordRef = useRef<BookingRecord | null>(null)
@@ -215,11 +213,7 @@ export function BookingEditor() {
   }
 
   const bookingNo = record?.bookingNo ?? ''
-  const content: BookingContent = {
-    ...fields,
-    bookingNo,
-    issuedDate: record ? todayIso(new Date(record.createdAt)) : draftIssuedDate,
-  }
+  const content: BookingContent = { ...fields, bookingNo }
   const stem = fileStem(bookingNo || 'draft', fields.bookingDate)
   const title = `Shri Ram Bus Service – बुकिंग ${bookingNo || '—'} – ${formatDateDdMmYyyy(fields.bookingDate)}`
   const shrunk = fitScale < FIT_WARN_SCALE

@@ -71,6 +71,22 @@ describe('bookingsRepo', () => {
     expect(await repo.list('nothing')).toEqual([])
   })
 
+  it('narrows by travel date, inclusive at both ends and open-ended on either side', async () => {
+    const sep1 = await repo.create({ ...newBookingFields(), name: 'एक', travelDate: '2026-09-01' })
+    const sep15 = await repo.create({ ...newBookingFields(), name: 'दो', travelDate: '2026-09-15' })
+    const oct1 = await repo.create({ ...newBookingFields(), name: 'तीन', travelDate: '2026-10-01' })
+    const undated = await repo.create({ ...newBookingFields(), name: 'चार', travelDate: '' })
+    const ids = (rows: { id: string }[]) => rows.map((b) => b.id).sort()
+
+    expect(ids(await repo.list('', {}))).toEqual([sep1.id, sep15.id, oct1.id, undated.id].sort())
+    expect(ids(await repo.list('', { from: '2026-09-15', to: '2026-09-15' }))).toEqual([sep15.id])
+    expect(ids(await repo.list('', { from: '2026-09-01', to: '2026-09-30' }))).toEqual([sep1.id, sep15.id].sort())
+    expect(ids(await repo.list('', { from: '2026-09-15' }))).toEqual([sep15.id, oct1.id].sort())
+    expect(ids(await repo.list('', { to: '2026-09-01' }))).toEqual([sep1.id])
+    expect(ids(await repo.list('तीन', { from: '2026-09-01' }))).toEqual([oct1.id])
+    expect(ids(await repo.list('एक', { from: '2026-09-02' }))).toEqual([])
+  })
+
   it('duplicates content into a new booking with a new number and today', async () => {
     const source = await repo.create({
       ...newBookingFields(),

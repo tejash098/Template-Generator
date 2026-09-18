@@ -5,18 +5,38 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FORM, ICON_SIZE } from '../../config/constants'
 import { bookingBalance } from '../../document/bookingText'
-import { formatDateDdMmYyyy } from '../../document/format'
+import { formatDateDdMmYyyy, monthRangeIso } from '../../document/format'
 import { formatTimeHindi } from '../../document/hindiTime'
 import { describePage } from '../../document/pageSizes'
 import { useLocale } from '../../i18n/useLocale'
 import { PageLayout } from '../../layouts/PageLayout'
 import type { BookingRecord } from '../../storage/db'
-import { bookings } from '../../storage/bookings'
+import { bookings, type TravelDateRange } from '../../storage/bookings'
 import { TEMPLATES } from '../../templates/registry'
 
 const template = TEMPLATES['bus-booking']
+
+type DateMode = 'all' | 'day' | 'month' | 'range'
+
+/** Date/month pickers sit inline beside the mode control (FORM.INPUT is w-full). */
+const DATE_W = 'w-40'
+
+/** The inclusive travel-date bounds the current filter controls describe. */
+function travelRange(mode: DateMode, day: string, month: string, from: string, to: string): TravelDateRange {
+  switch (mode) {
+    case 'day':
+      return day ? { from: day, to: day } : {}
+    case 'month':
+      return monthRangeIso(month) ?? {}
+    case 'range':
+      return { from: from || undefined, to: to || undefined }
+    default:
+      return {}
+  }
+}
 
 function AmountPill({ label, value, tone }: { label: string; value: number; tone: 'neutral' | 'success' | 'warning' }) {
   const tones = {
@@ -31,13 +51,28 @@ function AmountPill({ label, value, tone }: { label: string; value: number; tone
   )
 }
 
-/** Saved bookings, newest first, with search, duplicate and delete. */
+/** Saved bookings, newest first, with search, a travel-date filter, duplicate and delete. */
 export function BookingsList() {
   const { t } = useLocale()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
+  const [mode, setMode] = useState<DateMode>('all')
+  const [day, setDay] = useState('')
+  const [month, setMonth] = useState('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [pendingDelete, setPendingDelete] = useState<BookingRecord | null>(null)
-  const rows = useLiveQuery(() => bookings.list(query), [query])
+  const range = travelRange(mode, day, month, from, to)
+  // Primitive deps: a fresh `range` object every render would re-subscribe the live query.
+  const rows = useLiveQuery(() => bookings.list(query, range), [query, range.from, range.to])
+  const filtered = Boolean(query || range.from || range.to)
+
+  const dateModes: { value: DateMode; label: string }[] = [
+    { value: 'all', label: t('bookings.filter.all') },
+    { value: 'day', label: t('bookings.filter.day') },
+    { value: 'month', label: t('bookings.filter.month') },
+    { value: 'range', label: t('bookings.filter.range') },
+  ]
 
   const duplicate = async (id: string) => {
     const copy = await bookings.duplicate(id)
@@ -60,24 +95,67 @@ export function BookingsList() {
         </Button>
       }
     >
-      <div className="relative mb-4">
-        <Search size={ICON_SIZE.SM} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
-        <input
-          type="search"
-          className={`${FORM.INPUT} pl-9`}
-          placeholder={t('bookings.search')}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label={t('bookings.search')}
-        />
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search size={ICON_SIZE.SM} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
+          <input
+            type="search"
+            className={`${FORM.INPUT} pl-9`}
+            placeholder={t('bookings.search')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label={t('bookings.search')}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={FORM.LABEL}>{t('bookings.filter.label')}</span>
+          <SegmentedControl value={mode} options={dateModes} onChange={setMode} label={t('bookings.filter.label')} />
+          {mode === 'day' && (
+            <div className={DATE_W}>
+              <input type="date" className={FORM.INPUT} value={day} onChange={(e) => setDay(e.target.value)} aria-label={t('bookings.filter.day')} />
+            </div>
+          )}
+          {mode === 'month' && (
+            <div className={DATE_W}>
+              <input type="month" className={FORM.INPUT} value={month} onChange={(e) => setMonth(e.target.value)} aria-label={t('bookings.filter.month')} />
+            </div>
+          )}
+          {mode === 'range' && (
+            <>
+              <div className={DATE_W}>
+                <input
+                  type="date"
+                  className={FORM.INPUT}
+                  value={from}
+                  max={to || undefined}
+                  onChange={(e) => setFrom(e.target.value)}
+                  aria-label={t('bookings.filter.from')}
+                />
+              </div>
+              <span className="text-sm text-text-secondary" aria-hidden="true">
+                –
+              </span>
+              <div className={DATE_W}>
+                <input
+                  type="date"
+                  className={FORM.INPUT}
+                  value={to}
+                  min={from || undefined}
+                  onChange={(e) => setTo(e.target.value)}
+                  aria-label={t('bookings.filter.to')}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {rows === undefined ? (
         <p className="text-sm text-text-secondary">{t('bookings.loading')}</p>
       ) : rows.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center text-text-secondary">
-          <p>{query ? t('bookings.noMatch') : t('bookings.empty')}</p>
-          {!query && (
+          <p>{filtered ? t('bookings.noMatch') : t('bookings.empty')}</p>
+          {!filtered && (
             <Button variant="primary" to={template.routes.start}>
               {t('bookings.first')}
             </Button>

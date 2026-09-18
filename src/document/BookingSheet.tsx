@@ -11,10 +11,8 @@ import './sheet.css'
 /** Everything that varies from booking to booking. */
 export interface BookingContent {
   bookingNo: string
-  /** ISO yyyy-mm-dd — the pad's top दिनांक. */
+  /** ISO yyyy-mm-dd — when the booking was written; printed bottom-right above the staff name. */
   bookingDate: string
-  /** ISO yyyy-mm-dd — when the receipt was generated (printed under the staff signature). */
-  issuedDate: string
   /** Name of the signed-in staff member who issued it; '' when nobody was signed in. */
   issuedByName: string
   name: string
@@ -23,7 +21,7 @@ export interface BookingContent {
   thana: string
   from: string
   to: string
-  /** ISO yyyy-mm-dd */
+  /** ISO yyyy-mm-dd — the trip day; also the pad's top दिनांक. */
   travelDate: string
   /** HH:mm or '' */
   departureTime: string
@@ -50,10 +48,12 @@ const NBSP = ' '
 
 /**
  * One finished page: the fixed letterhead (in the chosen pad colour) + the
- * booking written as prose + the customer's phones/bus line and two signature
- * blocks (customer left, issuing staff right, with the issue date). This
- * element is what gets previewed, printed and exported; it is sized in CSS mm
- * and must never carry a CSS transform (the preview scales a wrapper).
+ * booking written as prose + the customer's phones/bus line and signature on
+ * the left, the booking date and issuing staff name on the right. On the
+ * "blank" pad the letterhead artwork keeps its space but paints nothing, so the
+ * same layout lands on a physical pre-printed pad. This element is what gets
+ * previewed, printed and exported; it is sized in CSS mm and must never carry
+ * a CSS transform (the preview scales a wrapper).
  */
 export function BookingSheet({ content, page, onFitChange, ref }: BookingSheetProps) {
   const dims = pageDimensionsMm(page)
@@ -66,17 +66,18 @@ export function BookingSheet({ content, page, onFitChange, ref }: BookingSheetPr
     onFitChange?.(scale)
   }, [scale, onFitChange])
 
+  const pad = PAD_COLORS[content.padColor]
   const style = {
     '--page-w': `${dims.widthMm}mm`,
     '--page-h': `${dims.heightMm}mm`,
-    '--brand': PAD_COLORS[content.padColor].hex,
+    '--brand': pad.hex,
   } as CSSProperties
 
   const phones = [content.mobile, content.mobile2].map((m) => m.trim()).filter(Boolean)
 
   return (
-    <div className="sheet" style={style} ref={ref} lang="hi">
-      <LetterheadHeader letterNo={content.bookingNo} date={formatDateDdMmYyyy(content.bookingDate)} />
+    <div className={pad.preprinted ? 'sheet sheet-preprinted' : 'sheet'} style={style} ref={ref} lang="hi">
+      <LetterheadHeader letterNo={content.bookingNo} date={formatDateDdMmYyyy(content.travelDate)} />
 
       <div className="lh-body" ref={bodyRef}>
         <div className="lh-content" ref={contentRef}>
@@ -97,15 +98,9 @@ export function BookingSheet({ content, page, onFitChange, ref }: BookingSheetPr
               </div>
             </div>
 
-            <div className="lh-party lh-party-right">
-              <div className="lh-signoff">
-                <div className="lh-sign-space" aria-hidden="true" />
-                <div className="lh-signatory">{content.issuedByName.trim() || NBSP}</div>
-                <div className="lh-sign-label">{BOOKING_TEXT.issuerSignatureLabel}</div>
-              </div>
-              <div className="lh-issued">
-                {BOOKING_TEXT.issuedLabel} {formatDateDdMmYyyy(content.issuedDate)}
-              </div>
+            <div className="lh-party lh-party-right lh-issuer">
+              <div>{formatDateDdMmYyyy(content.bookingDate)}</div>
+              <div className="lh-issuer-name">{content.issuedByName.trim() || NBSP}</div>
             </div>
           </div>
         </div>
