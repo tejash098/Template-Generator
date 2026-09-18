@@ -1,8 +1,9 @@
-import { todayIso } from '../document/format'
+import { nextDayIso, todayIso } from '../document/format'
 import { DEFAULT_PAD_COLOR, type PadColorId } from '../document/padColors'
 import { DEFAULT_PAGE } from '../document/pageSizes'
 import { db as defaultDb, type AppDb, type BookingRecord } from './db'
 import { emitBookingsChanged } from './events'
+import { getIssuer } from './issuer'
 import { allocateBookingNo, prepareNumbers } from './numbering'
 
 /** The user-editable part of a booking (everything except identity/bookkeeping). */
@@ -16,16 +17,21 @@ export function newBookingFields(init: Partial<BookingFields> = {}): BookingFiel
   return {
     template: 'bus-booking',
     bookingDate: today,
+    issuedByName: getIssuer().name,
     name: '',
-    place: '',
+    village: '',
+    post: '',
+    thana: '',
     from: '',
     to: '',
     travelDate: today,
     departureTime: '',
+    returnDate: nextDayIso(today),
     returnTime: '',
     fare: 0,
     advance: 0,
     mobile: '',
+    mobile2: '',
     bus: '',
     padColor: DEFAULT_PAD_COLOR as PadColorId,
     page: DEFAULT_PAGE,
@@ -47,10 +53,13 @@ export function newId(): string {
 const searchable = (b: BookingRecord): string[] => [
   b.bookingNo,
   b.name,
-  b.place,
+  b.village,
+  b.post,
+  b.thana,
   b.from,
   b.to,
   b.mobile,
+  b.mobile2,
   b.bus,
   b.bookingDate,
   b.travelDate,
@@ -105,11 +114,14 @@ export function bookingsRepo(db: AppDb = defaultDb) {
       const source = await db.bookings.get(id)
       if (!source || source.deletedAt) throw new Error(`Booking ${id} not found`)
       const {
-        template, name, place, from, to, travelDate, departureTime, returnTime, fare, advance, mobile, bus, padColor, page,
+        template, name, village, post, thana, from, to, travelDate, departureTime, returnDate, returnTime,
+        fare, advance, mobile, mobile2, bus, padColor, page,
       } = source
       return create({
-        template, name, place, from, to, travelDate, departureTime, returnTime, fare, advance, mobile, bus, padColor, page,
+        template, name, village, post, thana, from, to, travelDate, departureTime, returnDate, returnTime,
+        fare, advance, mobile, mobile2, bus, padColor, page,
         bookingDate: todayIso(),
+        issuedByName: getIssuer().name,
       })
     },
 

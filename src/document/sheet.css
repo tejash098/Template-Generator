@@ -133,27 +133,35 @@
   text-align: justify;
 }
 
+/* Phone numbers and the optional bus line, above the customer's signature. */
 .lh-lines {
-  margin-top: 0.9em;
   line-height: 1.6;
 }
 
-/* Generated-on date at the left, signature block at the right. */
+/* Two parties at the bottom: customer (left) and issuing staff (right). */
 .lh-bottom {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 1em;
-  margin-top: 1.6em;
+  gap: calc(var(--u) * 4);
+  margin-top: 1.4em;
 }
 
-.lh-issued {
-  color: var(--ink);
+.lh-party {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  min-width: 34%;
+  max-width: 48%;
+}
+
+.lh-party-right {
+  align-items: flex-end;
+  text-align: right;
 }
 
 .lh-signoff {
-  min-width: 34%;
-  max-width: 60%;
+  min-width: calc(var(--u) * 32);
   text-align: center;
 }
 
@@ -168,8 +176,13 @@
 }
 
 .lh-sign-label {
-  font-size: 0.85em;
+  font-size: 0.8em;
   color: var(--brand);
+}
+
+.lh-issued {
+  font-size: 0.9em;
+  color: var(--ink);
 }
 
 /* ---- Letterhead footer --------------------------------------------------- */

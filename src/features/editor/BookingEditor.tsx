@@ -1,3 +1,4 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -5,7 +6,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { EDITOR } from '../../config/constants'
 import type { BookingContent } from '../../document/BookingSheet'
-import { fileStem, formatDateDdMmYyyy, todayIso } from '../../document/format'
+import { fileStem, formatDateDdMmYyyy, nextDayIso, todayIso } from '../../document/format'
 import { isPadColorId } from '../../document/padColors'
 import { FIT_WARN_SCALE } from '../../document/useFitText'
 import { useLocale } from '../../i18n/useLocale'
@@ -53,6 +54,10 @@ export function BookingEditor() {
   const [mobileView, setMobileView] = useState<'form' | 'preview'>('form')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [hindiTyping, setHindiTyping] = useTransliterationPref()
+  // Edits typed but not yet saved; while true, remote changes must not replace the form.
+  const [pendingEdits, setPendingEdits] = useState(false)
+  // updatedAt of the stored row the form currently reflects.
+  const [appliedUpdatedAt, setAppliedUpdatedAt] = useState(0)
   // जारी दिनांक for an unsaved draft; saved bookings use their createdAt.
   const [draftIssuedDate] = useState(() => todayIso())
 
@@ -63,10 +68,13 @@ export function BookingEditor() {
   const latestFieldsRef = useRef(fields)
   const dirtyRef = useRef(false)
 
-  // Keeps the unmount flush below able to see the newest fields.
+  // Keeps the unmount flush below able to see the newest fields/record.
   useEffect(() => {
     latestFieldsRef.current = fields
   }, [fields])
+  useEffect(() => {
+    if (record) recordRef.current = record
+  }, [record])
 
   // Load an existing booking, or reset when moving to /new.
   useEffect(() => {
@@ -93,6 +101,7 @@ export function BookingEditor() {
       recordRef.current = rec
       setRecord(rec)
       setFields(pickFields(rec))
+      setAppliedUpdatedAt(rec.updatedAt)
       setStatus('saved')
     })
     return () => {
@@ -127,6 +136,7 @@ export function BookingEditor() {
           }
         }
         setStatus('saved')
+        setPendingEdits(false)
       } catch (err) {
         console.error(err)
         setStatus('error')
@@ -134,6 +144,16 @@ export function BookingEditor() {
     },
     [navigate],
   )
+
+  // Follow the stored row so edits synced from other devices reach an open
+  // editor. Applied during render (guarded) rather than in an effect.
+  const live = useLiveQuery(() => (id ? bookings.get(id) : undefined), [id])
+  if (live && record && live.id === record.id && live.updatedAt > appliedUpdatedAt && !pendingEdits) {
+    setAppliedUpdatedAt(live.updatedAt)
+    setRecord(live)
+    setFields(pickFields(live))
+  }
+  const deletedRemotely = live === undefined && record !== null && id === record.id && status === 'saved'
 
   // Debounced autosave; flushes on unmount so quick navigation loses nothing.
   useEffect(() => {
@@ -157,7 +177,15 @@ export function BookingEditor() {
 
   const update = (patch: Partial<BookingFields>) => {
     dirtyRef.current = true
-    setFields((prev) => ({ ...prev, ...patch }))
+    setPendingEdits(true)
+    setFields((prev) => {
+      const next = { ...prev, ...patch }
+      // A return date that was still "the day after" follows the travel date.
+      if (patch.travelDate !== undefined && prev.returnDate === nextDayIso(prev.travelDate)) {
+        next.returnDate = nextDayIso(patch.travelDate)
+      }
+      return next
+    })
   }
 
   const handleDuplicate = async () => {
@@ -177,7 +205,7 @@ export function BookingEditor() {
 
   if (!id && !isTemplateId(requestedTemplate)) return <Navigate to="/templates" replace />
 
-  if (status === 'missing') {
+  if (status === 'missing' || deletedRemotely) {
     return (
       <div className="flex flex-col items-center gap-3 py-16 text-center text-text-secondary">
         <p>{t('editor.missing')}</p>

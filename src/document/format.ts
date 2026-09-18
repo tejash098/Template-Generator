@@ -7,6 +7,14 @@ export function todayIso(now = new Date()): string {
   return `${y}-${m}-${d}`
 }
 
+/** The calendar day after an ISO date, in local time ('' stays ''). */
+export function nextDayIso(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!m) return ''
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1)
+  return todayIso(d)
+}
+
 export function formatDateDdMmYyyy(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
   if (!m) return iso

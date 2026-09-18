@@ -19,6 +19,7 @@ export const LETTERHEAD = {
 /** Fixed Hindi labels of the booking receipt (sentences live in bookingText.ts). */
 export const BOOKING_TEXT = {
   mobilePrefix: 'मो.-',
-  signatureLabel: 'हस्ताक्षर',
+  customerSignatureLabel: 'हस्ताक्षर (यात्री)',
+  issuerSignatureLabel: 'हस्ताक्षर (श्री राम बस सर्विस)',
   issuedLabel: 'जारी दिनांक :',
 } as const

@@ -22,7 +22,7 @@ describe('database migrations', () => {
     await v2.open()
     const tables = v2.tables.map((t) => t.name).sort()
     expect(tables).toEqual(['bookings', 'meta'])
-    expect(v2.verno).toBe(3)
+    expect(v2.verno).toBe(4)
 
     const created = await bookingsRepo(v2).create()
     expect(created.bookingNo).toBe('0005')
@@ -43,5 +43,37 @@ describe('database migrations', () => {
     expect(row?.bookingNo).toBe('0001')
     expect(await bookingsRepo(v3).pendingCount()).toBe(1)
     await v3.delete()
+  })
+
+  it('moves v3 `place` into `village` and fills the template v2 fields', async () => {
+    const name = 'test-migration-v4'
+    const v3 = new Dexie(name)
+    v3.version(1).stores({ letters: 'id, seq, date, updatedAt', meta: 'key' })
+    v3.version(2).stores({ letters: null, bookings: 'id, seq, bookingDate, travelDate, updatedAt', meta: 'key' })
+    v3.version(3).stores({ bookings: 'id, seq, bookingDate, travelDate, updatedAt, dirty, deletedAt', meta: 'key' })
+    await v3.table('bookings').add({
+      id: 'b1',
+      seq: 1,
+      bookingNo: '0001',
+      bookingDate: '2026-09-16',
+      place: 'बहेरा',
+      updatedAt: 1,
+      dirty: 0,
+    })
+    v3.close()
+
+    const v4 = createDb(name)
+    const row = (await v4.bookings.get('b1')) as Record<string, unknown> | undefined
+    expect(row).toMatchObject({
+      village: 'बहेरा',
+      post: '',
+      thana: '',
+      returnDate: '',
+      mobile2: '',
+      issuedByName: '',
+      dirty: 0,
+    })
+    expect(row).not.toHaveProperty('place')
+    await v4.delete()
   })
 })

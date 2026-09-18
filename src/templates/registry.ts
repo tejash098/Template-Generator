@@ -1,5 +1,5 @@
 import { BookingSheet, type BookingContent } from '../document/BookingSheet'
-import { todayIso } from '../document/format'
+import { nextDayIso, todayIso } from '../document/format'
 import { DEFAULT_PAD_COLOR, type PadColorId } from '../document/padColors'
 import type { Bilingual } from '../i18n/strings'
 import { newBookingFields, type BookingFields } from '../storage/bookings'
@@ -41,16 +41,21 @@ const busBooking: TemplateDef = {
     bookingNo: '0001',
     bookingDate: todayIso(),
     issuedDate: todayIso(),
-    name: 'प्रविन कुमार दुबे',
-    place: 'बहेरा, थाना दुर्गावती',
-    from: 'डहला (दुर्गावती)',
-    to: 'नौहट्टा',
+    issuedByName: 'वशिष्ठ नारायण सिंह',
+    name: 'तेजस कुमार सिंह',
+    village: 'केखड़ा',
+    post: '',
+    thana: 'भभुआ',
+    from: 'भभुआ',
+    to: 'बिहार',
     travelDate: todayIso(),
-    departureTime: '14:00',
+    departureTime: '16:00',
+    returnDate: nextDayIso(todayIso()),
     returnTime: '06:00',
-    fare: 12001,
-    advance: 2101,
-    mobile: '8709544189',
+    fare: 10000,
+    advance: 2000,
+    mobile: '917057xxxxx',
+    mobile2: '',
     bus: 'Star बस बड़ी',
     padColor,
   }),
