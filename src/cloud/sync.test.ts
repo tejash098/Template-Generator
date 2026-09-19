@@ -3,6 +3,7 @@ import { createDb, getMeta, setMeta, type AppDb } from '../storage/db'
 import { bookingsRepo, newBookingFields } from '../storage/bookings'
 import { setNumberingMode } from '../storage/numbering'
 import { createFakeCloud } from './fakeCloud'
+import { createShareLink } from './shareFiles'
 import { createSyncEngine, type SyncEngine } from './sync'
 import { syncStore } from './syncStore'
 
@@ -129,5 +130,106 @@ describe('sync engine', () => {
     online = true
     await engine.runSync()
     expect(cloud.rows.size).toBe(1)
+  })
+})
+
+describe('share files', () => {
+  const render = async () => new Blob(['x'])
+
+  it('keeps and pushes share paths that were recorded without bumping updatedAt', async () => {
+    const repo = bookingsRepo(db)
+    const a = await repo.create({ ...newBookingFields(), name: 'shared' })
+    await engine.runSync()
+    const pdfPath = `org-1/${a.id}/receipt.pdf`
+    await createShareLink({ api: cloud, db, bookingId: a.id, organizationId: 'org-1', kind: 'pdf', render })
+    await engine.runSync() // the pull re-reads this device's own row with an equal clock
+    expect((await db.bookings.get(a.id))?.sharePdfPath).toBe(pdfPath)
+    expect((await db.bookings.get(a.id))?.dirty).toBe(0)
+    expect(cloud.rows.get(a.id)?.share_pdf_path).toBe(pdfPath)
+    // Fresh file → no second upload on the next link.
+    await createShareLink({ api: cloud, db, bookingId: a.id, organizationId: 'org-1', kind: 'pdf', render })
+    expect(cloud.uploads).toEqual([pdfPath])
+  })
+
+  /** A synced booking with both share files uploaded, then deleted locally with a later clock. */
+  async function sharedThenDeleted() {
+    const repo = bookingsRepo(db)
+    const a = await repo.create({ ...newBookingFields(), name: 'shared' })
+    await engine.runSync()
+    const pdfPath = `org-1/${a.id}/receipt.pdf`
+    const pngPath = `org-1/${a.id}/receipt.png`
+    await createShareLink({ api: cloud, db, bookingId: a.id, organizationId: 'org-1', kind: 'pdf', render })
+    await createShareLink({ api: cloud, db, bookingId: a.id, organizationId: 'org-1', kind: 'png', render })
+    expect(cloud.uploads).toEqual([pdfPath, pngPath])
+    await engine.runSync()
+    expect(cloud.rows.get(a.id)?.share_pdf_path).toBe(pdfPath)
+    // Explicit clock: same-millisecond ties would let the pulled row win.
+    await db.bookings.update(a.id, { deletedAt: a.updatedAt + 1000, updatedAt: a.updatedAt + 1000, dirty: 1 })
+    return { a, pdfPath, pngPath }
+  }
+
+  it('removes both files before pushing the delete and clears the paths on both sides', async () => {
+    const { a, pdfPath, pngPath } = await sharedThenDeleted()
+    await engine.runSync()
+
+    expect(cloud.removed).toEqual([pdfPath, pngPath])
+    const remote = cloud.rows.get(a.id)
+    expect(remote?.deleted_at).toBeTruthy()
+    expect(remote?.share_pdf_path).toBeNull()
+    expect(remote?.share_png_path).toBeNull()
+    expect(remote?.share_rendered_at).toBeNull()
+    const local = await db.bookings.get(a.id)
+    expect(local?.dirty).toBe(0)
+    expect(local?.deletedAt).toBeTruthy()
+    expect(local?.sharePdfPath).toBeUndefined()
+    expect(local?.sharePngPath).toBeUndefined()
+    expect(local?.shareRenderedAt).toBeUndefined()
+    expect(syncStore.getState().status).toBe('idle')
+  })
+
+  it('keeps the delete pending, with its paths, until Storage removal succeeds', async () => {
+    const { a, pdfPath, pngPath } = await sharedThenDeleted()
+    const original = cloud.removeShareFiles
+    cloud.removeShareFiles = async () => {
+      throw new Error('storage down')
+    }
+    await engine.runSync()
+
+    expect(cloud.rows.get(a.id)?.deleted_at).toBeNull() // push not attempted: removal runs first
+    expect(cloud.rows.get(a.id)?.share_pdf_path).toBe(pdfPath)
+    const local = await db.bookings.get(a.id)
+    expect(local?.dirty).toBe(1)
+    expect(local?.sharePdfPath).toBe(pdfPath)
+    expect(local?.sharePngPath).toBe(pngPath)
+    expect(syncStore.getState().status).toBe('error')
+    expect(syncStore.getState().error).toBe('storage down')
+    expect(syncStore.getState().pendingCount).toBe(1)
+
+    cloud.removeShareFiles = original
+    await engine.runSync()
+    expect(cloud.removed).toEqual([pdfPath, pngPath])
+    expect((await db.bookings.get(a.id))?.dirty).toBe(0)
+    expect(cloud.rows.get(a.id)?.deleted_at).toBeTruthy()
+  })
+
+  it('does not touch Storage for a deleted booking that never reached the server', async () => {
+    const repo = bookingsRepo(db)
+    const b = await repo.create({ ...newBookingFields(), name: 'plain' })
+    await repo.remove(b.id)
+    await engine.runSync()
+    expect(cloud.removed).toEqual([])
+    expect(cloud.rows.get(b.id)?.deleted_at).toBeTruthy()
+  })
+
+  it('also removes a file another device shared after this device last pulled', async () => {
+    const repo = bookingsRepo(db)
+    const c = await repo.create({ ...newBookingFields(), name: 'c' })
+    await engine.runSync()
+    cloud.serverWrite({ id: c.id, share_png_path: `org-1/${c.id}/receipt.png`, share_rendered_at: c.updatedAt, client_updated_at: c.updatedAt })
+    await db.bookings.update(c.id, { deletedAt: c.updatedAt + 1000, updatedAt: c.updatedAt + 1000, dirty: 1 })
+    await engine.runSync()
+    expect(cloud.removed).toContain(`org-1/${c.id}/receipt.png`)
+    expect(cloud.rows.get(c.id)?.share_png_path).toBeNull()
+    expect(cloud.rows.get(c.id)?.deleted_at).toBeTruthy()
   })
 })

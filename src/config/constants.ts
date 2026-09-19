@@ -10,6 +10,7 @@ export const A11Y = {
 export const TRANSITION = {
   COLORS: 'transition-colors duration-200',
   COLORS_SLOW: 'transition-colors duration-300',
+  TRANSFORM: 'transition-transform duration-300 ease-out',
 } as const
 
 export const ROUNDED = {

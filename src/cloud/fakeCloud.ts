@@ -21,13 +21,21 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
     if (!isOnline()) throw new Error('network unavailable')
   }
 
+  const uploads: string[] = []
+  const removed: string[] = []
+
   const api: CloudApi & {
     rows: Map<string, RemoteBooking>
     counter: () => number
+    /** Storage paths uploaded / removed, in order. */
+    uploads: string[]
+    removed: string[]
     /** Simulate another device writing a row directly on the server. */
     serverWrite: (row: Partial<RemoteBooking> & { id: string }) => RemoteBooking
     emit: () => void
   } = {
+    uploads,
+    removed,
     rows,
     counter: () => counter,
     emit: () => listeners.forEach((l) => l()),
@@ -80,12 +88,17 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
       listeners.add(onChange)
       return () => listeners.delete(onChange)
     },
-    async uploadShareFile() {
+    async uploadShareFile(path) {
       requireOnline()
+      uploads.push(path)
     },
     async signedUrl(path) {
       requireOnline()
       return `https://files.test/${path}?signed`
+    },
+    async removeShareFiles(paths) {
+      requireOnline()
+      removed.push(...paths)
     },
     async listMembers(): Promise<Member[]> {
       return []

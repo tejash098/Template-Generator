@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Field } from '../../components/ui/Field'
-import { FORM } from '../../config/constants'
+import { PasswordInput } from '../../components/ui/PasswordInput'
 import type { TokenHashType } from '../../cloud/AuthContext'
 import { useAuth } from '../../cloud/useAuth'
 import { useLocale } from '../../i18n/useLocale'
@@ -103,24 +103,20 @@ export function SetPasswordPage() {
       {phase === 'form' && (
         <form className="flex flex-col gap-4" onSubmit={submit}>
           <Field id="password" label={t('auth.newPassword')}>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="new-password"
               required
               minLength={MIN_PASSWORD_LENGTH}
-              className={FORM.INPUT}
               value={password}
               onChange={(e) => setPasswordValue(e.target.value)}
             />
           </Field>
           <Field id="confirm" label={t('auth.confirmPassword')}>
-            <input
+            <PasswordInput
               id="confirm"
-              type="password"
               autoComplete="new-password"
               required
-              className={FORM.INPUT}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
             />

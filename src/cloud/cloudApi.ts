@@ -55,6 +55,8 @@ export interface CloudApi {
   subscribe(organizationId: string, onChange: () => void): () => void
   uploadShareFile(path: string, blob: Blob, contentType: string): Promise<void>
   signedUrl(path: string, expiresInSeconds: number): Promise<string>
+  /** Deletes hosted share files; paths that no longer exist are not an error. */
+  removeShareFiles(paths: string[]): Promise<void>
   listMembers(organizationId: string): Promise<Member[]>
   revokeMember(organizationId: string, userId: string): Promise<void>
   /** Owner edits another member's printed name and role (RPC `update_member`). */

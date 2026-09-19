@@ -3,6 +3,7 @@ import { onBookingsChanged } from '../storage/events'
 import { allocateBookingNo } from '../storage/numbering'
 import { BookingNoConflictError, type CloudApi } from './cloudApi'
 import { fromRemote, toRemote } from './mapping'
+import { shareFilePath } from './shareFiles'
 import { syncStore } from './syncStore'
 
 /*
@@ -92,7 +93,9 @@ export function createSyncEngine(config: SyncConfig): SyncEngine {
       await db.transaction('rw', db.bookings, db.meta, async () => {
         for (const row of rows) {
           const existing = await db.bookings.get(row.id)
-          const localWins = existing && existing.dirty === 1 && existing.updatedAt > row.client_updated_at
+          // A dirty row with the *same* clock is this device's own pushed row
+          // coming back, carrying un-pushed metadata (share paths); keep it.
+          const localWins = existing && existing.dirty === 1 && existing.updatedAt >= row.client_updated_at
           if (!localWins) await db.bookings.put(fromRemote(row, existing))
           if (!cursor || row.updated_at > cursor) cursor = row.updated_at
         }
@@ -116,6 +119,23 @@ export function createSyncEngine(config: SyncConfig): SyncEngine {
     })
   }
 
+  /**
+   * A deleted booking's hosted receipt goes with it. Both candidate files are
+   * removed by their deterministic path (another device may have shared it
+   * after this device last pulled), and the local paths are cleared only once
+   * Storage confirms — until then they mark the cleanup as still pending.
+   * `updatedAt` is left alone: the delete's clock is what LWW must carry.
+   */
+  async function releaseShareFiles(row: BookingRecord): Promise<BookingRecord> {
+    if (!row.deletedAt) return row
+    if (!row.organizationId && !row.sharePdfPath && !row.sharePngPath) return row // never reached the server
+    const org = row.organizationId ?? ctx.organizationId
+    await api.removeShareFiles([shareFilePath(org, row.id, 'pdf'), shareFilePath(org, row.id, 'png')])
+    const cleared = { sharePdfPath: undefined, sharePngPath: undefined, shareRenderedAt: undefined }
+    await db.bookings.update(row.id, cleared) // Dexie drops properties set to undefined
+    return { ...row, ...cleared }
+  }
+
   /** The number is taken in the organization: give this booking a fresh one. */
   async function renumber(id: string): Promise<BookingRecord | undefined> {
     return db.transaction('rw', db.bookings, db.meta, async () => {
@@ -131,7 +151,8 @@ export function createSyncEngine(config: SyncConfig): SyncEngine {
   async function push() {
     const dirty = await db.bookings.where('dirty').equals(1).toArray()
     await raiseCounterForLegacyRows(dirty)
-    for (const row of dirty) {
+    for (const dirtyRow of dirty) {
+      const row = await releaseShareFiles(dirtyRow)
       try {
         await api.pushRow(toRemote(row, ctx))
         await markClean(row.id, row.updatedAt)

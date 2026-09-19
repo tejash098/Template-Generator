@@ -85,9 +85,14 @@ export function LandingPage() {
               </Button>
             </div>
           </div>
-          <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-surface p-3 shadow-xl lg:rotate-1">
+          {/* Tilted at rest; straightens and comes forward on hover (lg:hover so it beats lg:rotate-1). */}
+          <Link
+            to={template.routes.start}
+            aria-label={t('landing.hero.open')}
+            className={`mx-auto block w-full max-w-md rounded-2xl border border-border bg-surface p-3 shadow-xl hover:scale-[1.03] hover:shadow-2xl lg:rotate-1 lg:hover:rotate-0 ${TRANSITION.TRANSFORM} ${A11Y.MOTION_SAFE} ${A11Y.FOCUS_RING}`}
+          >
             <SheetThumbnail content={template.sampleContent(template.defaultPadColor)} themed />
-          </div>
+          </Link>
         </section>
 
         {/* Features */}
