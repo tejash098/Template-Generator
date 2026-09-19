@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Field } from '../../components/ui/Field'
+import { PasswordInput } from '../../components/ui/PasswordInput'
 import { FORM } from '../../config/constants'
 import { useAuth } from '../../cloud/useAuth'
 import { useLocale } from '../../i18n/useLocale'
@@ -50,12 +51,10 @@ export function SignInPage() {
             />
           </Field>
           <Field id="password" label={t('auth.password')}>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="current-password"
               required
-              className={FORM.INPUT}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

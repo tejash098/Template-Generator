@@ -60,8 +60,9 @@
 }
 
 .lh-bus {
-  width: calc(var(--u) * 12);
-  height: auto;
+  /* Sized by height so the title row keeps its geometry whatever the artwork's aspect. */
+  height: calc(var(--u) * 6);
+  width: auto;
   flex: none;
 }
 

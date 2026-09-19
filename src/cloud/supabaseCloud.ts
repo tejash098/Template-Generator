@@ -87,6 +87,13 @@ export function supabaseCloud(client: AppSupabaseClient): CloudApi {
       return data.signedUrl
     },
 
+    async removeShareFiles(paths) {
+      // Missing (or RLS-hidden) objects are simply absent from the result, so
+      // a second device removing the same files is harmless.
+      const { error } = await client.storage.from(SHARE_BUCKET).remove(paths)
+      if (error) throw error
+    },
+
     async listMembers(organizationId): Promise<Member[]> {
       const { data: memberships, error } = await client
         .from('memberships')

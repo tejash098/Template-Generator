@@ -1,33 +1,21 @@
+import { BUS_PATH } from './busPath'
 import { LETTERHEAD } from './letterheadContent'
 
 /*
- * Recreation of the printed letterhead artwork. The bus and swastika are
- * drawn as inline SVG so they stay crisp at any page size and need no image
- * assets (the original print files were not available; only a photo).
+ * Recreation of the printed letterhead artwork. The bus (owner-supplied
+ * line art, see busPath.ts) and swastika are inline SVG painted with
+ * currentColor, so they stay crisp at any page size and follow the pad colour.
  */
 
 function BusIcon({ mirrored = false }: { mirrored?: boolean }) {
   return (
     <svg
       className="lh-bus"
-      viewBox="0 0 120 60"
+      viewBox="9 17 108 89"
       aria-hidden="true"
       style={mirrored ? { transform: 'scaleX(-1)' } : undefined}
     >
-      <g fill="currentColor">
-        <path d="M6 14q0-6 6-6h84q10 0 16 10l4 8v14q0 4-4 4H10q-4 0-4-4z" />
-        <circle cx="30" cy="48" r="8" />
-        <circle cx="90" cy="48" r="8" />
-      </g>
-      <g fill="#fff">
-        <rect x="14" y="14" width="14" height="12" rx="2" />
-        <rect x="32" y="14" width="14" height="12" rx="2" />
-        <rect x="50" y="14" width="14" height="12" rx="2" />
-        <rect x="68" y="14" width="14" height="12" rx="2" />
-        <path d="M88 14h8q6 0 10 6l3 6H88z" />
-        <circle cx="30" cy="48" r="3.5" />
-        <circle cx="90" cy="48" r="3.5" />
-      </g>
+      <path d={BUS_PATH} fill="currentColor" fillRule="evenodd" stroke="currentColor" strokeWidth="0.25" strokeLinejoin="round" />
     </svg>
   )
 }
