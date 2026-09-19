@@ -54,14 +54,15 @@ export function LetterheadHeader({ letterNo, date }: { letterNo: string; date: s
         <BusIcon mirrored />
       </div>
       <div className="lh-address">{LETTERHEAD.address}</div>
+      {/* One line: पत्रांक on the left, दिनांक on the right, as on the printed pad. */}
       <div className="lh-meta">
-        <div className="lh-meta-row lh-meta-right">
-          <span className="lh-meta-label">{LETTERHEAD.dateLabel}</span>
-          <span className="lh-meta-value">{date}</span>
-        </div>
         <div className="lh-meta-row">
           <span className="lh-meta-label">{LETTERHEAD.letterNoLabel}</span>
           <span className="lh-meta-value">{letterNo}</span>
+        </div>
+        <div className="lh-meta-row">
+          <span className="lh-meta-label">{LETTERHEAD.dateLabel}</span>
+          <span className="lh-meta-value">{date}</span>
         </div>
       </div>
     </header>
