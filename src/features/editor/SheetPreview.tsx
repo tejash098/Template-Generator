@@ -37,8 +37,11 @@ export function SheetPreview({ content, page, onFitChange, sheetRef, maxScale = 
     return () => observer.disconnect()
   }, [widthPx, maxScale])
 
+  // contain-inline-size: the scaler's explicit width must never count as this
+  // host's min-content, or a grid/flex parent could not shrink below the last
+  // measured size (the preview would lock a phone layout at desktop width).
   return (
-    <div className="preview-host w-full" ref={hostRef}>
+    <div className="preview-host w-full min-w-0 contain-inline-size" ref={hostRef}>
       <div
         className="preview-scaler mx-auto overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.18)] dark:shadow-[0_2px_16px_rgba(0,0,0,0.6)]"
         style={{ width: widthPx * scale, height: heightPx * scale }}
