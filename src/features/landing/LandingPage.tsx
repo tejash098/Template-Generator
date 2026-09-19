@@ -63,7 +63,7 @@ export function LandingPage() {
 
       <main className="mx-auto max-w-6xl px-4 md:px-6">
         {/* Hero */}
-        <section className="grid items-center gap-10 py-10 md:py-16 lg:grid-cols-[1.1fr_1fr]">
+        <section className="grid grid-cols-1 items-center gap-10 py-10 md:py-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div>
             <span className="inline-block rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
               {t('landing.badge')}
@@ -89,7 +89,7 @@ export function LandingPage() {
           <Link
             to={template.routes.start}
             aria-label={t('landing.hero.open')}
-            className={`mx-auto block w-full max-w-md rounded-2xl border border-border bg-surface p-3 shadow-xl hover:scale-[1.03] hover:shadow-2xl lg:rotate-1 lg:hover:rotate-0 ${TRANSITION.TRANSFORM} ${A11Y.MOTION_SAFE} ${A11Y.FOCUS_RING}`}
+            className={`mx-auto block w-full min-w-0 max-w-md rounded-2xl border border-border bg-surface p-3 shadow-xl hover:scale-[1.03] hover:shadow-2xl lg:rotate-1 lg:hover:rotate-0 ${TRANSITION.TRANSFORM} ${A11Y.MOTION_SAFE} ${A11Y.FOCUS_RING}`}
           >
             <SheetThumbnail content={template.sampleContent(template.defaultPadColor)} themed />
           </Link>
