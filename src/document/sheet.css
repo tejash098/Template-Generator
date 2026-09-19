@@ -88,6 +88,10 @@
 }
 
 .lh-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--u) * 4);
   margin-top: calc(var(--u) * 2);
   font-size: calc(var(--u) * 2.5);
   line-height: 1.4;
@@ -97,10 +101,6 @@
   display: flex;
   align-items: baseline;
   gap: calc(var(--u) * 0.8);
-}
-
-.lh-meta-right {
-  justify-content: flex-end;
 }
 
 .lh-meta-value {
