@@ -82,20 +82,21 @@
 .report-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
-/* A4 content is 186mm: the route takes what the fixed columns leave (~87mm).
-   Amounts fit "किराया 125000 - बयाना 25000 =" on one line; the blank column
-   keeps room for at least 10 handwritten characters. */
+/* Auto layout: the serial and route columns shrink to their text (the route
+   up to 80mm, then wraps to its 2-line clamp), the blank column keeps room for
+   at least 10 handwritten characters, and the amounts take everything left. */
 .report-col-serial {
   width: 15mm;
 }
-.report-col-amounts {
-  width: 54mm;
-}
 .report-col-blank {
   width: 30mm;
+}
+
+.report-route-cell {
+  width: 1%;
 }
 
 .report-table th,
@@ -125,6 +126,8 @@
 }
 
 .report-route {
+  width: max-content;
+  max-width: 80mm;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -133,7 +136,10 @@
   overflow-wrap: anywhere;
 }
 
-.report-amounts {
+/* "किराया … - बयाना … =" and "बाकी …" share one line when it fits and
+   break only between the two parts otherwise (at most 2 lines). */
+.report-amount-part {
+  display: inline-block;
   white-space: nowrap;
 }
 
