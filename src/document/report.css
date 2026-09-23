@@ -1,0 +1,147 @@
+/*
+ * The day-wise bookings list (BookingReport.tsx). Geometry comes from
+ * REPORT_LAYOUT in reportPages.ts through the custom properties set inline
+ * on each page, so the pagination maths and the layout cannot drift apart.
+ * Rows have a FIXED height; long routes are clamped rather than growing.
+ */
+.report-page {
+  --ink: #141414;
+  --rule: #444;
+  --font-body: 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', serif;
+  --font-head: 'Mukta', 'Noto Sans Devanagari', sans-serif;
+
+  box-sizing: border-box;
+  width: var(--page-w);
+  height: var(--page-h);
+  padding: var(--margin);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  color: var(--ink);
+  color-scheme: light; /* paper: never themed */
+  font-family: var(--font-body);
+  font-size: 3.6mm;
+  line-height: 1.3;
+  -webkit-font-smoothing: antialiased;
+}
+
+.report-title {
+  flex: none;
+  height: var(--title-h);
+  box-sizing: border-box;
+  border-bottom: 0.4mm solid var(--ink);
+  text-align: center;
+  font-family: var(--font-head);
+}
+
+.report-title-name {
+  font-size: 7mm;
+  font-weight: 700;
+  letter-spacing: 0.3mm;
+  line-height: 1.2;
+}
+
+.report-title-sub {
+  margin-top: 1mm;
+  font-size: 4.2mm;
+  font-weight: 500;
+}
+
+.report-title-range {
+  font-weight: 400;
+}
+
+.report-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.report-section + .report-section {
+  margin-top: var(--gap);
+}
+
+.report-date {
+  box-sizing: border-box;
+  height: var(--heading-h);
+  margin: 0;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 1.5mm;
+  font-family: var(--font-head);
+  font-size: 4.2mm;
+  font-weight: 700;
+}
+
+.report-continued {
+  font-weight: 400;
+  white-space: pre;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.report-col-serial {
+  width: 10%;
+}
+.report-col-route {
+  width: 40%;
+}
+.report-col-amounts {
+  width: 25%;
+}
+.report-col-blank {
+  width: 25%;
+}
+
+.report-table th,
+.report-table td {
+  box-sizing: border-box;
+  border: 0.25mm solid var(--rule);
+  padding: 1.2mm 1.8mm;
+  vertical-align: top;
+  text-align: left;
+  overflow: hidden;
+}
+
+.report-table th {
+  height: var(--thead-h);
+  vertical-align: middle;
+  font-family: var(--font-head);
+  font-weight: 700;
+}
+
+.report-table tbody tr {
+  height: var(--row-h);
+}
+
+.report-serial {
+  text-align: center !important;
+}
+
+.report-route {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.report-amounts {
+  white-space: nowrap;
+}
+
+.report-footer {
+  flex: none;
+  height: var(--footer-h);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  font-family: var(--font-head);
+  font-size: 3mm;
+}

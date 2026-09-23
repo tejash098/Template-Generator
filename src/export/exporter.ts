@@ -25,6 +25,8 @@ export interface DocumentExporter {
   readonly pdfKind: 'vector' | 'raster'
   toImage(job: ExportJob, format: ImageFormat, dpi?: number): Promise<Blob>
   toPdf(job: ExportJob): Promise<Blob>
+  /** One PDF with a page per job, in order (e.g. the multi-page bookings report). */
+  pagesToPdf(jobs: ExportJob[], title?: string): Promise<Blob>
   /** Opens the platform print flow for the sheet currently on screen. */
   print(page: PageDimensionsMm): Promise<void>
   canShare(): boolean

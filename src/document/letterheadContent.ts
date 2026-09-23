@@ -21,3 +21,18 @@ export const BOOKING_TEXT = {
   mobilePrefix: 'मो.-',
   customerSignatureLabel: 'हस्ताक्षर (यात्री)',
 } as const
+
+/** Fixed Hindi labels of the day-wise bookings list (BookingReport.tsx). */
+export const REPORT_TEXT = {
+  heading: 'बुकिंग सूची',
+  dateLabel: 'दिनांक :',
+  noDate: 'तिथि नहीं',
+  continued: '(जारी)',
+  serial: 'क्रम सं.',
+  route: 'कहाँ से – कहाँ तक',
+  amounts: 'राशि',
+  total: 'कुल =',
+  advance: 'बयाना =',
+  balance: 'बाकी =',
+  page: 'पृष्ठ',
+} as const
