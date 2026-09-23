@@ -31,8 +31,10 @@ export const REPORT_TEXT = {
   serial: 'क्रम सं.',
   route: 'कहाँ से – कहाँ तक',
   amounts: 'राशि',
-  total: 'कुल =',
-  advance: 'बयाना =',
-  balance: 'बाकी =',
+  fare: 'किराया',
+  advance: 'बयाना',
+  balance: 'बाकी',
+  minus: '-',
+  equals: '=',
   page: 'पृष्ठ',
 } as const

@@ -1,7 +1,7 @@
 import type { CSSProperties, Ref } from 'react'
 import { bookingBalance } from './bookingText'
 import { REPORT_LAYOUT, REPORT_PAGE, type ReportPage } from './reportPages'
-import { formatDateDdMmYyyy, formatRupees } from './format'
+import { formatDateDdMmYyyy } from './format'
 import { LETTERHEAD, REPORT_TEXT } from './letterheadContent'
 import './report.css'
 
@@ -76,13 +76,11 @@ export function BookingReport({ pages, subtitle, ref }: BookingReportProps) {
                         </td>
                         <td className="report-amounts">
                           <div>
-                            {REPORT_TEXT.total} {formatRupees(b.fare)}
+                            {REPORT_TEXT.fare} {b.fare} {REPORT_TEXT.minus} {REPORT_TEXT.advance} {b.advance}{' '}
+                            {REPORT_TEXT.equals}
                           </div>
                           <div>
-                            {REPORT_TEXT.advance} {formatRupees(b.advance)}
-                          </div>
-                          <div>
-                            {REPORT_TEXT.balance} {formatRupees(bookingBalance(b))}
+                            {REPORT_TEXT.balance} {bookingBalance(b)}
                           </div>
                         </td>
                         <td />

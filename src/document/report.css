@@ -2,7 +2,7 @@
  * The day-wise bookings list (BookingReport.tsx). Geometry comes from
  * REPORT_LAYOUT in reportPages.ts through the custom properties set inline
  * on each page, so the pagination maths and the layout cannot drift apart.
- * Rows have a FIXED height; long routes are clamped rather than growing.
+ * Rows have a FIXED height; long routes are clamped to 2 lines rather than growing.
  */
 .report-page {
   --ink: #141414;
@@ -85,17 +85,17 @@
   table-layout: fixed;
 }
 
+/* A4 content is 186mm: the route takes what the fixed columns leave (~87mm).
+   Amounts fit "किराया 125000 - बयाना 25000 =" on one line; the blank column
+   keeps room for at least 10 handwritten characters. */
 .report-col-serial {
-  width: 10%;
-}
-.report-col-route {
-  width: 40%;
+  width: 15mm;
 }
 .report-col-amounts {
-  width: 25%;
+  width: 54mm;
 }
 .report-col-blank {
-  width: 25%;
+  width: 30mm;
 }
 
 .report-table th,
@@ -113,6 +113,7 @@
   vertical-align: middle;
   font-family: var(--font-head);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .report-table tbody tr {
@@ -126,8 +127,8 @@
 .report-route {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
   overflow-wrap: anywhere;
 }
