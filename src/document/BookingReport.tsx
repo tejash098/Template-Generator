@@ -69,19 +69,19 @@ export function BookingReport({ pages, subtitle, ref }: BookingReportProps) {
                     {section.rows.map(({ serial, booking: b }) => (
                       <tr key={b.id}>
                         <td className="report-serial">{serial}</td>
-                        <td>
+                        <td className="report-route-cell">
                           <div className="report-route">
                             {b.from || '—'} – {b.to || '—'}
                           </div>
                         </td>
                         <td className="report-amounts">
-                          <div>
+                          <span className="report-amount-part">
                             {REPORT_TEXT.fare} {b.fare} {REPORT_TEXT.minus} {REPORT_TEXT.advance} {b.advance}{' '}
                             {REPORT_TEXT.equals}
-                          </div>
-                          <div>
+                          </span>{' '}
+                          <span className="report-amount-part">
                             {REPORT_TEXT.balance} {bookingBalance(b)}
-                          </div>
+                          </span>
                         </td>
                         <td />
                       </tr>
