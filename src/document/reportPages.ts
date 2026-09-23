@@ -48,7 +48,7 @@ export const REPORT_LAYOUT = {
   footerMm: 8,
   headingMm: 10,
   theadMm: 9,
-  rowMm: 17,
+  rowMm: 12,
   gapMm: 4,
 } as const
 
