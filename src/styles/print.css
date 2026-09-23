@@ -65,3 +65,27 @@
     break-after: avoid;
   }
 }
+
+/*
+ * Bookings report (features/bookings/ReportActions.tsx): while the report is
+ * mounted as a direct child of <body>, print only its pages, one per sheet.
+ */
+@media print {
+  body:has(> .report-print-root) > #root {
+    display: none !important;
+  }
+
+  .report-print-root {
+    position: static !important;
+    left: auto !important;
+  }
+
+  .report-page {
+    break-after: page;
+    break-inside: avoid;
+  }
+
+  .report-page:last-child {
+    break-after: auto;
+  }
+}

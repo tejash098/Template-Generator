@@ -60,16 +60,23 @@ export const webExporter: DocumentExporter = {
     return dataUrlToBlob(await captureDataUrl(job, format, dpi))
   },
 
-  async toPdf(job) {
-    const png = await this.toImage(job, 'png', DEFAULT_EXPORT_DPI)
+  toPdf(job) {
+    return this.pagesToPdf([job], job.title ?? job.fileStem)
+  },
+
+  async pagesToPdf(jobs, title) {
     const { PDFDocument } = await import('pdf-lib')
     const pdf = await PDFDocument.create()
-    pdf.setTitle(job.title ?? job.fileStem)
+    pdf.setTitle(title ?? jobs[0]?.title ?? jobs[0]?.fileStem ?? '')
     pdf.setProducer('Shri Ram Bus Service Bookings')
     pdf.setCreationDate(new Date())
-    const page = pdf.addPage([mmToPt(job.page.widthMm), mmToPt(job.page.heightMm)])
-    const image = await pdf.embedPng(await png.arrayBuffer())
-    page.drawImage(image, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() })
+    // One page at a time so a phone never holds every raster at once.
+    for (const job of jobs) {
+      const png = await this.toImage(job, 'png', DEFAULT_EXPORT_DPI)
+      const page = pdf.addPage([mmToPt(job.page.widthMm), mmToPt(job.page.heightMm)])
+      const image = await pdf.embedPng(await png.arrayBuffer())
+      page.drawImage(image, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() })
+    }
     return new Blob([new Uint8Array(await pdf.save())], { type: 'application/pdf' })
   },
 

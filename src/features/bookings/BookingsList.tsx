@@ -16,6 +16,7 @@ import { PageLayout } from '../../layouts/PageLayout'
 import type { BookingRecord } from '../../storage/db'
 import { bookings, type TravelDateRange } from '../../storage/bookings'
 import { TEMPLATES } from '../../templates/registry'
+import { ReportActions } from './ReportActions'
 
 const template = TEMPLATES['bus-booking']
 
@@ -51,7 +52,7 @@ function AmountPill({ label, value, tone }: { label: string; value: number; tone
   )
 }
 
-/** Saved bookings, newest first, with search, a travel-date filter, duplicate and delete. */
+/** Saved bookings, newest first, with search, a travel-date filter, duplicate, delete and a day-wise report. */
 export function BookingsList() {
   const { t } = useLocale()
   const navigate = useNavigate()
@@ -90,9 +91,12 @@ export function BookingsList() {
       title={t('bookings.title')}
       subtitle={t('bookings.subtitle')}
       actions={
-        <Button variant="primary" to={template.routes.start} icon={<Plus size={ICON_SIZE.SM} aria-hidden="true" />}>
-          {t('bookings.new')}
-        </Button>
+        <>
+          <ReportActions rows={rows} range={range} />
+          <Button variant="primary" to={template.routes.start} icon={<Plus size={ICON_SIZE.SM} aria-hidden="true" />}>
+            {t('bookings.new')}
+          </Button>
+        </>
       }
     >
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
