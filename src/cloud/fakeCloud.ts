@@ -1,5 +1,13 @@
-import type { CloudApi, Member, Membership, RemoteBooking, RemoteBookingInsert } from './cloudApi'
-import { BookingNoConflictError } from './cloudApi'
+import type {
+  CalendarEvent,
+  CloudApi,
+  GoogleConnection,
+  Member,
+  Membership,
+  RemoteBooking,
+  RemoteBookingInsert,
+} from './cloudApi'
+import { BookingNoConflictError, CalendarCallError } from './cloudApi'
 
 /**
  * In-memory CloudApi for tests: behaves like the server (unique booking
@@ -24,12 +32,34 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
   const uploads: string[] = []
   const removed: string[] = []
 
+  // Google Calendar: the member's connection and events, plus the calls made.
+  const calendar = {
+    connection: null as GoogleConnection | null,
+    events: new Map<string, CalendarEvent>(),
+    calls: [] as string[],
+    /** When set, the next calendar call rejects with this code. */
+    failWith: null as string | null,
+  }
+  const calendarListeners = new Set<() => void>()
+  const calendarCall = (name: string) => {
+    requireOnline()
+    calendar.calls.push(name)
+    if (calendar.failWith) {
+      const code = calendar.failWith
+      calendar.failWith = null
+      throw new CalendarCallError(code)
+    }
+  }
+
   const api: CloudApi & {
     rows: Map<string, RemoteBooking>
     counter: () => number
     /** Storage paths uploaded / removed, in order. */
     uploads: string[]
     removed: string[]
+    calendar: typeof calendar
+    /** Simulate a server-side change to the member's calendar events (e.g. the hook). */
+    emitCalendar: () => void
     /** Simulate another device writing a row directly on the server. */
     serverWrite: (row: Partial<RemoteBooking> & { id: string }) => RemoteBooking
     emit: () => void
@@ -37,6 +67,8 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
     uploads,
     removed,
     rows,
+    calendar,
+    emitCalendar: () => calendarListeners.forEach((l) => l()),
     counter: () => counter,
     emit: () => listeners.forEach((l) => l()),
     serverWrite(patch) {
@@ -107,6 +139,48 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
     async updateMember() {},
     async removeMember() {},
     async invite() {},
+    async googleConnection() {
+      requireOnline()
+      return calendar.connection
+    },
+    async listCalendarEvents() {
+      requireOnline()
+      return [...calendar.events.values()]
+    },
+    subscribeCalendarEvents(_userId, onChange) {
+      calendarListeners.add(onChange)
+      return () => calendarListeners.delete(onChange)
+    },
+    async calendarStart(input) {
+      calendarCall('start')
+      return `https://accounts.google.test/auth?state=${input.state}&code_challenge=${input.codeChallenge}`
+    },
+    async calendarFinish() {
+      calendarCall('finish')
+      calendar.connection = { status: 'connected', accountEmail: 'owner@gmail.test' }
+      return { accountEmail: 'owner@gmail.test' }
+    },
+    async calendarDisconnect() {
+      calendarCall('disconnect')
+      calendar.connection = null
+      calendar.events.clear()
+    },
+    async calendarAdd(bookingId) {
+      calendarCall('add')
+      if (!calendar.connection) throw new CalendarCallError('not_connected')
+      const event: CalendarEvent = {
+        bookingId,
+        status: 'added',
+        htmlLink: `https://calendar.google.test/event?eid=${bookingId}`,
+        error: null,
+      }
+      calendar.events.set(bookingId, event)
+      return event
+    },
+    async calendarRemove(bookingId) {
+      calendarCall('remove')
+      calendar.events.delete(bookingId)
+    },
   }
   return api
 }

@@ -14,6 +14,7 @@ A local-first, offline-capable document generator for Shri Ram Bus Service (a bu
 - **Auto-assigned numbers**: Automatically assigns and tracks sequence numbers (पत्रांक).
 - **Bilingual UI**: Toggle between English and Hindi for the user interface (the generated document is always in Hindi).
 - **Dark Mode**: Fully supports light and dark themes.
+- **Google Calendar** (signed-in members): connect your own Google account on the Plugins page, then tap the calendar icon on a booking to add its trip as an all-day event on the travel date. Edits and deletions update the event automatically.
 
 ## Tech Stack
 
@@ -65,6 +66,16 @@ npm run test:watch
 - **Storage**: Only the raw form data is stored in the database. Documents are always re-rendered on the fly, saving storage space and avoiding stale document structures.
 - **Routing**: Uses `HashRouter` to ensure the compiled output can be served over `file://` (useful for planned Capacitor and Electron wrappers).
 - **Exporting Pipeline**: The web exporter captures the HTML layout via `html-to-image` (to ensure accurate Devanagari font shaping in the browser) and embeds the image onto a generated PDF via `pdf-lib`.
+
+## Google Calendar setup
+
+Google Calendar runs in two Supabase Edge Functions (`google-calendar`, `google-calendar-hook`) and reuses DocuDrive's Google OAuth client. The browser never gets the client secret or a Google token.
+
+1. Google Cloud Console (the DocuDrive project) → *Clients* → the Web client → *Authorized redirect URIs*: add `https://template-generator-ruby.vercel.app/` and `http://localhost:5173/`.
+2. *Audience*: while the app is in **Testing**, list every member's Google account as a test user. Their access also expires after 7 days, so they reconnect weekly. Publishing the app removes both limits, but it also applies to DocuDrive.
+3. Supabase → Edge Functions → Secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URIS` (the same URIs, comma-separated) and `APP_URL` (`https://template-generator-ruby.vercel.app`).
+
+Events include the customer's name, address, phone numbers and amounts. They go into a separate "Shri Ram Bus Service" calendar in each member's own Google account.
 
 ## Future Milestones
 - **Milestone 2**: Capacitor (Mobile App) and Electron (Desktop App) wrappers.

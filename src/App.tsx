@@ -5,6 +5,8 @@ import { SignInPage } from './features/auth/SignInPage'
 import { BookingsList } from './features/bookings/BookingsList'
 import { BookingEditor } from './features/editor/BookingEditor'
 import { LandingPage } from './features/landing/LandingPage'
+import { GoogleCallbackPage } from './features/plugins/GoogleCallbackPage'
+import { PluginsPage } from './features/plugins/PluginsPage'
 import { TeamPage } from './features/team/TeamPage'
 import { TemplateGallery } from './features/templates/TemplateGallery'
 import { TemplateStart } from './features/templates/TemplateStart'
@@ -24,6 +26,7 @@ export default function App() {
         <Route path="signin" element={<SignInPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="auth/set-password" element={<SetPasswordPage />} />
+        <Route path="oauth/google" element={<GoogleCallbackPage />} />
         <Route element={<AppShell />}>
           <Route path="templates" element={<TemplateGallery />} />
           <Route path="templates/:templateId" element={<TemplateStart />} />
@@ -31,6 +34,7 @@ export default function App() {
           <Route path="bookings" element={<BookingsList />} />
           <Route path="bookings/:id" element={<BookingEditor />} />
           <Route path="team" element={<TeamPage />} />
+          <Route path="plugins" element={<PluginsPage />} />
           <Route path="*" element={<Navigate to="/templates" replace />} />
         </Route>
       </Routes>

@@ -16,6 +16,7 @@ import { PageLayout } from '../../layouts/PageLayout'
 import type { BookingRecord } from '../../storage/db'
 import { bookings, type TravelDateRange } from '../../storage/bookings'
 import { TEMPLATES } from '../../templates/registry'
+import { CalendarButton } from './CalendarButton'
 import { ReportActions } from './ReportActions'
 
 const template = TEMPLATES['bus-booking']
@@ -205,7 +206,8 @@ export function BookingsList() {
                     <AmountPill label={t('bookings.balance')} value={bookingBalance(b)} tone="warning" />
                   </div>
                 </Link>
-                <div className="flex gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <CalendarButton booking={b} />
                   <Button size="sm" onClick={() => duplicate(b.id)} icon={<Copy size={14} aria-hidden="true" />}>
                     {t('bookings.duplicate')}
                   </Button>
