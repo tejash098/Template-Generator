@@ -32,6 +32,31 @@ export interface NumberBlockRange {
   end: number
 }
 
+/** The signed-in member's own Google Calendar connection (tokens never leave the server). */
+export interface GoogleConnection {
+  status: 'connected' | 'needs_reauth'
+  accountEmail: string
+}
+
+/** One booking the member added to their Google Calendar. */
+export interface CalendarEvent {
+  bookingId: string
+  status: 'added' | 'error'
+  htmlLink: string | null
+  /** Error code from the Edge Functions while `status` is 'error'. */
+  error: string | null
+}
+
+/** A google-calendar call failed; `code` maps to the i18n key `calendar.error.<code>`. */
+export class CalendarCallError extends Error {
+  readonly code: string
+  constructor(code: string) {
+    super(`google calendar: ${code}`)
+    this.name = 'CalendarCallError'
+    this.code = code
+  }
+}
+
 /** Thrown by pushRow when a booking number is already taken in the organization. */
 export class BookingNoConflictError extends Error {
   readonly bookingId: string
@@ -64,4 +89,16 @@ export interface CloudApi {
   /** Owner deletes another member's membership row; their login and bookings stay. */
   removeMember(organizationId: string, userId: string): Promise<void>
   invite(input: { email: string; displayName: string; role: MembershipRole }): Promise<void>
+
+  // Google Calendar (Edge Function `google-calendar`; reads go through RLS, own rows only)
+  googleConnection(): Promise<GoogleConnection | null>
+  listCalendarEvents(): Promise<CalendarEvent[]>
+  /** Live changes to the member's calendar events; returns an unsubscribe. */
+  subscribeCalendarEvents(userId: string, onChange: () => void): () => void
+  /** Google's consent URL for a PKCE flow started in this browser. */
+  calendarStart(input: { state: string; codeChallenge: string; redirectUri: string }): Promise<string>
+  calendarFinish(input: { code: string; codeVerifier: string; redirectUri: string }): Promise<{ accountEmail: string }>
+  calendarDisconnect(): Promise<void>
+  calendarAdd(bookingId: string): Promise<CalendarEvent>
+  calendarRemove(bookingId: string): Promise<void>
 }

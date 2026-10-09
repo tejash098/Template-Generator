@@ -11,9 +11,15 @@ import './index.css'
 import './styles/print.css'
 import App from './App'
 import { AuthProvider } from './cloud/AuthProvider'
+import { CalendarProvider } from './cloud/CalendarProvider'
+import { routeOAuthRedirect } from './cloud/oauthRedirect'
 import { LocaleProvider } from './i18n/LocaleProvider'
 import { SidebarProvider } from './layout/SidebarProvider'
 import { ThemeProvider } from './theme/ThemeProvider'
+
+// Google returns from the Calendar consent to `/?code=…`; move that into the
+// hash route before HashRouter reads the URL.
+routeOAuthRedirect()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -21,7 +27,9 @@ createRoot(document.getElementById('root')!).render(
       <LocaleProvider>
         <SidebarProvider>
           <AuthProvider>
-            <App />
+            <CalendarProvider>
+              <App />
+            </CalendarProvider>
           </AuthProvider>
         </SidebarProvider>
       </LocaleProvider>

@@ -1,6 +1,10 @@
+import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js'
+import type { Database } from './database.types'
 import type { AppSupabaseClient } from './supabase'
 import {
   BookingNoConflictError,
+  CalendarCallError,
+  type CalendarEvent,
   type CloudApi,
   type Member,
   type Membership,
@@ -10,6 +14,36 @@ import {
 
 const SHARE_BUCKET = 'share-files'
 const UNIQUE_VIOLATION = '23505'
+
+type CalendarEventRow = Database['public']['Tables']['booking_calendar_events']['Row']
+
+const toCalendarEvent = (row: CalendarEventRow): CalendarEvent => ({
+  bookingId: row.booking_id,
+  status: row.status === 'error' ? 'error' : 'added',
+  htmlLink: row.html_link,
+  error: row.error,
+})
+
+/** Calls the google-calendar Edge Function; failures become CalendarCallError with the function's code. */
+async function invokeCalendar<T>(client: AppSupabaseClient, body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await client.functions.invoke<{ ok: boolean; error?: string } & T>('google-calendar', { body })
+  if (error) {
+    let code = 'unexpected'
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const payload = (await error.context.json()) as { error?: string }
+        code = payload.error ?? code
+      } catch {
+        // not JSON (e.g. the gateway's own error page)
+      }
+    } else if (error instanceof FunctionsFetchError) {
+      code = 'network'
+    }
+    throw new CalendarCallError(code)
+  }
+  if (!data || data.ok === false) throw new CalendarCallError(data?.error ?? 'unexpected')
+  return data
+}
 
 /** CloudApi backed by supabase-js. All data access goes through RLS. */
 export function supabaseCloud(client: AppSupabaseClient): CloudApi {
@@ -156,6 +190,57 @@ export function supabaseCloud(client: AppSupabaseClient): CloudApi {
       })
       if (error) throw error
       if (data && data.ok === false) throw new Error(data.error ?? 'invite failed')
+    },
+
+    async googleConnection() {
+      // RLS returns only the caller's own row.
+      const { data, error } = await client.from('google_connections').select('status, account_email').maybeSingle()
+      if (error) throw error
+      if (!data) return null
+      return { status: data.status === 'needs_reauth' ? 'needs_reauth' : 'connected', accountEmail: data.account_email }
+    },
+
+    async listCalendarEvents() {
+      const { data, error } = await client.from('booking_calendar_events').select('*')
+      if (error) throw error
+      return (data ?? []).map(toCalendarEvent)
+    },
+
+    subscribeCalendarEvents(userId, onChange) {
+      const channel = client
+        .channel(`calendar-events-${userId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'booking_calendar_events', filter: `user_id=eq.${userId}` },
+          () => onChange(),
+        )
+        .subscribe()
+      return () => {
+        void client.removeChannel(channel)
+      }
+    },
+
+    async calendarStart(input) {
+      const data = await invokeCalendar<{ url: string }>(client, { action: 'start', ...input })
+      return data.url
+    },
+
+    async calendarFinish(input) {
+      const data = await invokeCalendar<{ accountEmail: string }>(client, { action: 'finish', ...input })
+      return { accountEmail: data.accountEmail }
+    },
+
+    async calendarDisconnect() {
+      await invokeCalendar(client, { action: 'disconnect' })
+    },
+
+    async calendarAdd(bookingId) {
+      const data = await invokeCalendar<{ event: CalendarEventRow }>(client, { action: 'add', bookingId })
+      return toCalendarEvent(data.event)
+    },
+
+    async calendarRemove(bookingId) {
+      await invokeCalendar(client, { action: 'remove', bookingId })
     },
   }
 }

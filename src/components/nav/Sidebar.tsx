@@ -31,8 +31,8 @@ function Brand({ showWordmark }: { showWordmark: boolean }) {
 export function Sidebar() {
   const { isOpen, toggle, close } = useSidebar()
   const { t } = useLocale()
-  const { isOwner } = useAuth()
-  const items = NAV_ITEMS.filter((item) => !item.ownerOnly || isOwner)
+  const { isOwner, status } = useAuth()
+  const items = NAV_ITEMS.filter((item) => (!item.ownerOnly || isOwner) && (!item.memberOnly || status === 'member'))
 
   // On phones the sidebar is a drawer; close it after navigating.
   const handleNavClick = () => {
