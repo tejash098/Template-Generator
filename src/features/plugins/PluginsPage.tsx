@@ -1,22 +1,28 @@
-import { AlertTriangle, CalendarDays, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CalendarDays, CalendarRange, CheckCircle2, ExternalLink, LayoutList } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../cloud/useAuth'
 import { useCalendar } from '../../cloud/useCalendar'
 import { Button } from '../../components/ui/Button'
-import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { FORM, ICON_SIZE } from '../../config/constants'
 import { useLocale } from '../../i18n/useLocale'
 import { PageLayout } from '../../layouts/PageLayout'
 import { calendarErrorKey, type PluginsRouteState } from './calendarError'
+import { PluginCard } from './PluginCard'
+import { ViaGoogleCard } from './ViaGoogleCard'
 
 /** Google sends the browser back to a web address; the file:// shells must connect from the website. */
 const CAN_REDIRECT = typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol)
 
 type Notice = { tone: 'ok' | 'error'; text: string } | null
 
-/** Each member connects their own Google Calendar here (DocuDrive's "Plugins" page). */
+/**
+ * Each member connects their own Google Calendar here (DocuDrive's "Plugins"
+ * page). Notion Calendar and calendar.com have no API for adding events but
+ * show Google calendars, so their cards explain the Google route; Microsoft
+ * Outlook is announced as coming soon.
+ */
 export function PluginsPage() {
   const { status } = useAuth()
   const cal = useCalendar()
@@ -124,23 +130,39 @@ export function PluginsPage() {
 
   return (
     <PageLayout title={t('plugins.title')} subtitle={t('plugins.subtitle')}>
-      <Card className="flex max-w-2xl flex-col gap-4">
-        <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-subtle text-accent">
-            <CalendarDays size={ICON_SIZE.MD} aria-hidden="true" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-text-primary">{t('plugins.google.name')}</h2>
-            <p className="mt-1 text-sm text-text-secondary">{t('plugins.google.desc')}</p>
-          </div>
-        </div>
-        {body}
-        {notice && (
-          <p className={`text-sm ${notice.tone === 'ok' ? 'text-success' : 'text-danger'}`} role="status">
-            {notice.text}
-          </p>
-        )}
-      </Card>
+      <div className="flex max-w-2xl flex-col gap-4">
+        <PluginCard icon={CalendarDays} name={t('plugins.google.name')} description={t('plugins.google.desc')}>
+          {body}
+          {notice && (
+            <p className={`text-sm ${notice.tone === 'ok' ? 'text-success' : 'text-danger'}`} role="status">
+              {notice.text}
+            </p>
+          )}
+        </PluginCard>
+
+        <ViaGoogleCard
+          icon={CalendarRange}
+          name={t('plugins.notion.name')}
+          description={t('plugins.notion.desc')}
+          openUrl="https://calendar.notion.so/"
+          openIcon={<ExternalLink size={14} aria-hidden="true" />}
+        />
+
+        <ViaGoogleCard
+          icon={LayoutList}
+          name={t('plugins.calendarCom.name')}
+          description={t('plugins.calendarCom.desc')}
+          openUrl="https://www.calendar.com/"
+          openIcon={<ExternalLink size={14} aria-hidden="true" />}
+        />
+
+        <PluginCard
+          icon={CalendarClock}
+          name={t('plugins.microsoft.name')}
+          description={t('plugins.microsoft.desc')}
+          badge={{ label: t('plugins.badge.comingSoon'), tone: 'muted' }}
+        />
+      </div>
 
       <ConfirmDialog
         open={confirmDisconnect}
