@@ -10,6 +10,8 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'cla
   size?: Size
   /** Renders a router link styled as a button. */
   to?: string
+  /** Renders an external link (new tab) styled as a button. */
+  href?: string
   icon?: ReactNode
   className?: string
 }
@@ -32,6 +34,7 @@ export function Button({
   variant = 'secondary',
   size = 'md',
   to,
+  href,
   icon,
   className = '',
   children,
@@ -39,6 +42,14 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const classes = `${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${className}`
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={classes}>
+        {icon}
+        {children}
+      </a>
+    )
+  }
   if (to) {
     return (
       <Link to={to} className={classes}>
