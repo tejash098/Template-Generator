@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-
 import { Button } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
+import { Switch } from '../../components/ui/Switch'
 import { EDITOR } from '../../config/constants'
 import type { BookingContent } from '../../document/BookingSheet'
 import { fileStem, formatDateDdMmYyyy, nextDayIso } from '../../document/format'
@@ -53,6 +54,8 @@ export function BookingEditor() {
   const [fitScale, setFitScale] = useState(1)
   const [mobileView, setMobileView] = useState<'form' | 'preview'>('form')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Original/Copy: an export choice, never stored; every opened booking starts on Original.
+  const [copyMark, setCopyMark] = useState(false)
   const [hindiTyping, setHindiTyping] = useTransliterationPref()
   // Edits typed but not yet saved; while true, remote changes must not replace the form.
   const [pendingEdits, setPendingEdits] = useState(false)
@@ -82,6 +85,7 @@ export function BookingEditor() {
         recordRef.current = null
         setRecord(null)
         setFields(initialFields())
+        setCopyMark(false)
         setStatus('new')
       }
       return
@@ -100,6 +104,7 @@ export function BookingEditor() {
       setRecord(rec)
       setFields(pickFields(rec))
       setAppliedUpdatedAt(rec.updatedAt)
+      setCopyMark(false)
       setStatus('saved')
     })
     return () => {
@@ -258,6 +263,16 @@ export function BookingEditor() {
         >
           <BookingForm fields={fields} bookingNo={bookingNo} hindiTyping={hindiTyping} onChange={update} />
 
+          <div className="mt-4 flex items-center">
+            <Switch
+              checked={copyMark}
+              onChange={setCopyMark}
+              offLabel={t('editor.copyMark.original')}
+              onLabel={t('editor.copyMark.copy')}
+              label={t('editor.copyMark.label')}
+            />
+          </div>
+
           {shrunk && (
             <p className="mt-3 rounded-lg bg-warning-subtle px-3 py-2 text-sm text-warning" role="status">
               {t('editor.shrunk', { pct: Math.round(fitScale * 100) })}
@@ -271,6 +286,7 @@ export function BookingEditor() {
             title={title}
             ready={record !== null}
             bookingId={record?.id}
+            copyMark={copyMark}
           />
 
           {record && (
@@ -288,7 +304,7 @@ export function BookingEditor() {
             mobileView === 'form' ? EDITOR.PREVIEW_PARKED : ''
           }`}
         >
-          <SheetPreview content={content} page={fields.page} onFitChange={setFitScale} sheetRef={sheetRef} />
+          <SheetPreview content={content} page={fields.page} copyMark={copyMark} onFitChange={setFitScale} sheetRef={sheetRef} />
         </div>
       </div>
 

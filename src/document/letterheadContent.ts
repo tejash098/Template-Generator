@@ -20,6 +20,8 @@ export const LETTERHEAD = {
 export const BOOKING_TEXT = {
   mobilePrefix: 'मो.-',
   customerSignatureLabel: 'हस्ताक्षर (यात्री)',
+  /** Diagonal mark behind the text when the editor's Original/Copy switch is on Copy. */
+  copyWatermark: 'COPY',
 } as const
 
 /** Fixed Hindi labels of the day-wise bookings list (BookingReport.tsx). */

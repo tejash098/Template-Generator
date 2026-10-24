@@ -39,6 +39,8 @@ export interface BookingContent {
 interface BookingSheetProps {
   content: BookingContent
   page: PageSpec
+  /** Paint the COPY watermark behind the text (an export choice, never stored). */
+  copyMark?: boolean
   /** Reports the body-text scale after fitting (1 = no shrink). */
   onFitChange?: (scale: number) => void
   ref?: Ref<HTMLDivElement>
@@ -51,11 +53,12 @@ const NBSP = ' '
  * booking written as prose + the customer's phones/bus line and signature on
  * the left, the booking date and issuing staff name on the right. On the
  * "blank" pad the letterhead artwork keeps its space but paints nothing, so the
- * same layout lands on a physical pre-printed pad. This element is what gets
- * previewed, printed and exported; it is sized in CSS mm and must never carry
- * a CSS transform (the preview scales a wrapper).
+ * same layout lands on a physical pre-printed pad. A copy carries a diagonal
+ * COPY stamp behind everything, on every pad including the blank one. This
+ * element is what gets previewed, printed and exported; it is sized in CSS mm
+ * and must never carry a CSS transform (the preview scales a wrapper).
  */
-export function BookingSheet({ content, page, onFitChange, ref }: BookingSheetProps) {
+export function BookingSheet({ content, page, copyMark = false, onFitChange, ref }: BookingSheetProps) {
   const dims = pageDimensionsMm(page)
   const bodyRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -77,6 +80,16 @@ export function BookingSheet({ content, page, onFitChange, ref }: BookingSheetPr
 
   return (
     <div className={pad.preprinted ? 'sheet sheet-preprinted' : 'sheet'} style={style} ref={ref} lang="hi">
+      {copyMark && (
+        <div className="sheet-watermark" lang="en">
+          <div className="sheet-watermark-band">
+            <div className="sheet-watermark-rule" />
+            <div className="sheet-watermark-text">{BOOKING_TEXT.copyWatermark}</div>
+            <div className="sheet-watermark-rule" />
+          </div>
+        </div>
+      )}
+
       <LetterheadHeader letterNo={content.bookingNo} date={formatDateDdMmYyyy(content.travelDate)} />
 
       <div className="lh-body" ref={bodyRef}>

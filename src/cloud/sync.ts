@@ -3,7 +3,7 @@ import { onBookingsChanged } from '../storage/events'
 import { allocateBookingNo } from '../storage/numbering'
 import { BookingNoConflictError, type CloudApi } from './cloudApi'
 import { fromRemote, toRemote } from './mapping'
-import { shareFilePath } from './shareFiles'
+import { allShareFilePaths } from './shareFiles'
 import { syncStore } from './syncStore'
 
 /*
@@ -120,9 +120,10 @@ export function createSyncEngine(config: SyncConfig): SyncEngine {
   }
 
   /**
-   * A deleted booking's hosted receipt goes with it. Both candidate files are
-   * removed by their deterministic path (another device may have shared it
-   * after this device last pulled), and the local paths are cleared only once
+   * A deleted booking's hosted receipt goes with it. Every candidate file
+   * (pdf/png, original/copy) is removed by its deterministic path (another
+   * device may have shared it after this device last pulled, and only the
+   * variant rendered last is recorded), and the local paths are cleared only once
    * Storage confirms — until then they mark the cleanup as still pending.
    * `updatedAt` is left alone: the delete's clock is what LWW must carry.
    */
@@ -130,7 +131,7 @@ export function createSyncEngine(config: SyncConfig): SyncEngine {
     if (!row.deletedAt) return row
     if (!row.organizationId && !row.sharePdfPath && !row.sharePngPath) return row // never reached the server
     const org = row.organizationId ?? ctx.organizationId
-    await api.removeShareFiles([shareFilePath(org, row.id, 'pdf'), shareFilePath(org, row.id, 'png')])
+    await api.removeShareFiles(allShareFilePaths(org, row.id))
     const cleared = { sharePdfPath: undefined, sharePngPath: undefined, shareRenderedAt: undefined }
     await db.bookings.update(row.id, cleared) // Dexie drops properties set to undefined
     return { ...row, ...cleared }
