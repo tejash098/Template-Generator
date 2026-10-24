@@ -9,6 +9,7 @@
   --u: calc(min(var(--page-w), var(--page-h)) / 100);
   --brand: #1f2a6e; /* pad ink colour; overridden per document (document/padColors.ts) */
   --ink: #141414;
+  --watermark: #f4bcbc; /* the COPY stamp; light red on every pad */
   --font-body: 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', serif;
   --font-head: 'Mukta', 'Noto Sans Devanagari', sans-serif;
   --font-title: 'Rozha One', 'Tiro Devanagari Hindi', serif;
@@ -21,6 +22,7 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  isolation: isolate; /* own stacking context, so the watermark's z-index:-1 stays above the paper */
   background: #fff;
   color: var(--ink);
   color-scheme: light; /* the page is paper: never themed */
@@ -28,6 +30,46 @@
   font-size: calc(var(--u) * 2.7);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ---- COPY watermark ------------------------------------------------------ */
+/* Painted behind all text (z-index -1 inside the isolated sheet) and out of
+   flow, so the fit-to-page scale is the same with or without it. Only this
+   child is rotated; the sheet itself never carries a transform. The rules are
+   borders, not backgrounds, so they print without "background graphics". */
+.sheet-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--watermark);
+}
+
+.sheet-watermark-band {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 2.7);
+  width: calc(var(--u) * 86);
+  transform: rotate(-35deg);
+}
+
+.sheet-watermark-rule {
+  box-sizing: content-box; /* the gap between the two lines is the height, borders outside it */
+  height: calc(var(--u) * 1.7);
+  border-top: calc(var(--u) * 1) solid currentColor;
+  border-bottom: calc(var(--u) * 1) solid currentColor;
+}
+
+.sheet-watermark-text {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: calc(var(--u) * 30);
+  line-height: 0.9;
+  letter-spacing: 0.06em;
+  text-align: center;
 }
 
 /* ---- Letterhead header ------------------------------------------------- */

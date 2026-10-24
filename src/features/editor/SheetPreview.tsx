@@ -5,6 +5,8 @@ import { mmToPx, pageDimensionsMm, type PageSpec } from '../../document/pageSize
 interface SheetPreviewProps {
   content: BookingContent
   page: PageSpec
+  /** Show the COPY watermark (editor's Original/Copy switch). */
+  copyMark?: boolean
   onFitChange?: (scale: number) => void
   /** Receives the untransformed `.sheet` element for exporting. */
   sheetRef?: RefObject<HTMLDivElement | null>
@@ -17,7 +19,7 @@ interface SheetPreviewProps {
  * wrapper (`.preview-transform`), never on the sheet itself, so exporters can
  * capture it at 1:1. The class hooks are used by styles/print.css.
  */
-export function SheetPreview({ content, page, onFitChange, sheetRef, maxScale = 1 }: SheetPreviewProps) {
+export function SheetPreview({ content, page, copyMark, onFitChange, sheetRef, maxScale = 1 }: SheetPreviewProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
   const dims = pageDimensionsMm(page)
@@ -47,7 +49,7 @@ export function SheetPreview({ content, page, onFitChange, sheetRef, maxScale = 
         style={{ width: widthPx * scale, height: heightPx * scale }}
       >
         <div className="preview-transform origin-top-left" style={{ transform: `scale(${scale})` }}>
-          <BookingSheet ref={sheetRef} content={content} page={page} onFitChange={onFitChange} />
+          <BookingSheet ref={sheetRef} content={content} page={page} copyMark={copyMark} onFitChange={onFitChange} />
         </div>
       </div>
     </div>

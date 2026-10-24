@@ -18,11 +18,13 @@ interface ExportBarProps {
   ready: boolean
   /** Saved booking id; needed for share links. */
   bookingId?: string
+  /** The sheet shows the COPY watermark: files get a `-copy` name and their own share link. */
+  copyMark?: boolean
 }
 
 type Action = 'pdf' | 'png' | 'jpeg' | 'print' | 'share-pdf' | 'share-image' | 'link-pdf' | 'link-png'
 
-export function ExportBar({ sheetRef, page, fileStem, title, ready, bookingId }: ExportBarProps) {
+export function ExportBar({ sheetRef, page, fileStem: baseStem, title, ready, bookingId, copyMark = false }: ExportBarProps) {
   const { t } = useLocale()
   const { status: authStatus, membership, api } = useAuth()
   const exporter = getExporter()
@@ -30,6 +32,7 @@ export function ExportBar({ sheetRef, page, fileStem, title, ready, bookingId }:
   const [message, setMessage] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const dims = pageDimensionsMm(page)
+  const fileStem = copyMark ? `${baseStem}-copy` : baseStem
   const canShareLink = authStatus === 'member' && !!membership && !!api && !!bookingId
 
   const job = (): ExportJob | null =>
@@ -76,6 +79,7 @@ export function ExportBar({ sheetRef, page, fileStem, title, ready, bookingId }:
           bookingId,
           organizationId: membership.organizationId,
           kind,
+          copy: copyMark,
           render: () => (kind === 'pdf' ? exporter.toPdf(j) : exporter.toImage(j, 'png')),
         })
         if (typeof navigator.share === 'function') {

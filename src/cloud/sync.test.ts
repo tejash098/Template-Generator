@@ -3,7 +3,7 @@ import { createDb, getMeta, setMeta, type AppDb } from '../storage/db'
 import { bookingsRepo, newBookingFields } from '../storage/bookings'
 import { setNumberingMode } from '../storage/numbering'
 import { createFakeCloud } from './fakeCloud'
-import { createShareLink } from './shareFiles'
+import { allShareFilePaths, createShareLink } from './shareFiles'
 import { createSyncEngine, type SyncEngine } from './sync'
 import { syncStore } from './syncStore'
 
@@ -151,6 +151,29 @@ describe('share files', () => {
     expect(cloud.uploads).toEqual([pdfPath])
   })
 
+  it('hosts the COPY variant as its own file and re-renders when the variant changes', async () => {
+    const repo = bookingsRepo(db)
+    const a = await repo.create({ ...newBookingFields(), name: 'copy' })
+    await engine.runSync()
+    const pdfPath = `org-1/${a.id}/receipt.pdf`
+    const copyPath = `org-1/${a.id}/receipt-copy.pdf`
+    const link = (copy: boolean) =>
+      createShareLink({ api: cloud, db, bookingId: a.id, organizationId: 'org-1', kind: 'pdf', copy, render })
+
+    await link(true)
+    expect((await db.bookings.get(a.id))?.sharePdfPath).toBe(copyPath)
+    await link(true) // fresh copy → no second upload
+    await link(false) // other variant rendered last → render the original
+    expect((await db.bookings.get(a.id))?.sharePdfPath).toBe(pdfPath)
+    expect(cloud.uploads).toEqual([copyPath, pdfPath])
+    expect(allShareFilePaths('org-1', a.id)).toEqual([
+      pdfPath,
+      copyPath,
+      `org-1/${a.id}/receipt.png`,
+      `org-1/${a.id}/receipt-copy.png`,
+    ])
+  })
+
   /** A synced booking with both share files uploaded, then deleted locally with a later clock. */
   async function sharedThenDeleted() {
     const repo = bookingsRepo(db)
@@ -168,11 +191,11 @@ describe('share files', () => {
     return { a, pdfPath, pngPath }
   }
 
-  it('removes both files before pushing the delete and clears the paths on both sides', async () => {
-    const { a, pdfPath, pngPath } = await sharedThenDeleted()
+  it('removes every file before pushing the delete and clears the paths on both sides', async () => {
+    const { a } = await sharedThenDeleted()
     await engine.runSync()
 
-    expect(cloud.removed).toEqual([pdfPath, pngPath])
+    expect(cloud.removed).toEqual(allShareFilePaths('org-1', a.id))
     const remote = cloud.rows.get(a.id)
     expect(remote?.deleted_at).toBeTruthy()
     expect(remote?.share_pdf_path).toBeNull()
@@ -207,7 +230,7 @@ describe('share files', () => {
 
     cloud.removeShareFiles = original
     await engine.runSync()
-    expect(cloud.removed).toEqual([pdfPath, pngPath])
+    expect(cloud.removed).toEqual(allShareFilePaths('org-1', a.id))
     expect((await db.bookings.get(a.id))?.dirty).toBe(0)
     expect(cloud.rows.get(a.id)?.deleted_at).toBeTruthy()
   })
