@@ -49,3 +49,9 @@ export const EDITOR = {
     'max-lg:fixed max-lg:top-0 max-lg:-left-[300vw] max-lg:w-screen max-lg:h-auto max-lg:overflow-visible max-lg:pointer-events-none',
   PANES: 'editor-panes grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(340px,460px)_1fr]',
 } as const
+
+export const SIGNATURE = {
+  /** Fixed-height preview box (set the height and font-size alongside); drawn and uploaded marks scale to it. */
+  PREVIEW:
+    'flex items-center overflow-hidden whitespace-nowrap [&_.sig-drawn]:h-full [&_.sig-drawn]:w-auto [&_.sig-image]:h-full [&_.sig-image]:w-auto',
+} as const

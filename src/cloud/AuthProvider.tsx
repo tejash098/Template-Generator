@@ -35,10 +35,15 @@ function authErrorKey(error: AuthError | Error | null): string | null {
 
 /** Forget everything cloud-related on this device; keeps the anonymous sequence. */
 async function clearCloudState(discardUnsynced: boolean) {
-  await db.transaction('rw', db.bookings, db.meta, async () => {
-    if (discardUnsynced) await db.bookings.clear()
-    else await db.bookings.where('dirty').equals(0).delete()
-    await db.meta.bulkDelete(['deviceCode', 'organizationId', 'numberBlocks', 'provisionalCounter', 'syncCursor'])
+  await db.transaction('rw', db.bookings, db.signatures, db.meta, async () => {
+    if (discardUnsynced) {
+      await db.bookings.clear()
+      await db.signatures.clear()
+    } else {
+      await db.bookings.where('dirty').equals(0).delete()
+      await db.signatures.where('dirty').equals(0).delete()
+    }
+    await db.meta.bulkDelete(['deviceCode', 'organizationId', 'numberBlocks', 'provisionalCounter', 'syncCursor', 'signatureCursor'])
   })
 }
 
@@ -75,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isOnline: () => navigator.onLine !== false,
         reserve: (size) => api.reserveBlock(deviceId, size),
       })
-      setIssuer({ name: m.displayName || authUser.email })
+      setIssuer({ name: m.displayName || authUser.email, userId: authUser.id })
       engineRef.current?.stop()
       engineRef.current = createSyncEngine({ api, db, userId: authUser.id, organizationId: m.organizationId, deviceId })
       engineRef.current.start()

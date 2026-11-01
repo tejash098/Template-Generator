@@ -1,8 +1,8 @@
 import { getMeta, setMeta, type AppDb, type BookingRecord } from '../storage/db'
-import { onBookingsChanged } from '../storage/events'
+import { onBookingsChanged, onSignaturesChanged } from '../storage/events'
 import { allocateBookingNo } from '../storage/numbering'
 import { BookingNoConflictError, type CloudApi } from './cloudApi'
-import { fromRemote, toRemote } from './mapping'
+import { fromRemote, signatureFromRemote, signatureToRemote, toRemote } from './mapping'
 import { allShareFilePaths } from './shareFiles'
 import { syncStore } from './syncStore'
 
@@ -15,6 +15,9 @@ import { syncStore } from './syncStore'
  * `client_updated_at`; the server trigger `bookings_lww` drops stale pushes,
  * and the winner reaches the loser on its next pull. Runs are coalesced: a
  * request during a run schedules exactly one follow-up run.
+ *
+ * The member's signature library rides along in every run with the same
+ * rules (own cursor, same LWW trigger); RLS limits it to the member's rows.
  */
 
 export interface SyncConfig {
@@ -167,6 +170,48 @@ export function createSyncEngine(config: SyncConfig): SyncEngine {
     }
   }
 
+  async function pullSignatures() {
+    let cursor = (await getMeta(db, 'signatureCursor')) ?? null
+    for (;;) {
+      const rows = await api.pullSignaturesSince(cursor, PULL_PAGE)
+      if (rows.length === 0) break
+      await db.transaction('rw', db.signatures, db.meta, async () => {
+        for (const row of rows) {
+          const existing = await db.signatures.get(row.id)
+          const localWins = existing && existing.dirty === 1 && existing.updatedAt >= row.client_updated_at
+          const record = localWins ? null : signatureFromRemote(row, existing)
+          if (record) await db.signatures.put(record)
+          if (!cursor || row.updated_at > cursor) cursor = row.updated_at
+        }
+        if (cursor) await setMeta(db, 'signatureCursor', cursor)
+      })
+      if (rows.length < PULL_PAGE) break
+    }
+  }
+
+  /**
+   * Dirty signatures go up as the signed-in member's (rows made while signed
+   * out are adopted). A row owned by someone else is never pushed: RLS would
+   * reject it and stall every later run.
+   */
+  async function pushSignatures() {
+    const dirty = await db.signatures.where('dirty').equals(1).toArray()
+    for (const row of dirty) {
+      if (row.createdBy && row.createdBy !== ctx.userId) continue
+      await api.pushSignature(signatureToRemote(row, ctx))
+      await db.transaction('rw', db.signatures, async () => {
+        const current = await db.signatures.get(row.id)
+        if (!current || current.updatedAt !== row.updatedAt) return
+        await db.signatures.update(row.id, {
+          dirty: 0,
+          syncedAt: Date.now(),
+          organizationId: ctx.organizationId,
+          createdBy: ctx.userId,
+        })
+      })
+    }
+  }
+
   async function runOnce() {
     if (!isOnline()) {
       syncStore.setState({ status: 'offline' })
@@ -177,6 +222,8 @@ export function createSyncEngine(config: SyncConfig): SyncEngine {
     try {
       await pull()
       await push()
+      await pullSignatures()
+      await pushSignatures()
       failures = 0
       syncStore.setState({ status: 'idle', lastSyncedAt: Date.now(), error: null })
     } catch (err) {
@@ -236,6 +283,7 @@ export function createSyncEngine(config: SyncConfig): SyncEngine {
     stopped = false
     syncStore.setState({ status: isOnline() ? 'idle' : 'offline', error: null })
     cleanups.push(onBookingsChanged(() => requestSync('local-write')))
+    cleanups.push(onSignaturesChanged(() => requestSync('local-write')))
     cleanups.push(api.subscribe(ctx.organizationId, () => requestSync('realtime')))
     const onOnline = () => requestSync('online')
     window.addEventListener('online', onOnline)

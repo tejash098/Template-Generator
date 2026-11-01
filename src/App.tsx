@@ -7,6 +7,7 @@ import { BookingEditor } from './features/editor/BookingEditor'
 import { LandingPage } from './features/landing/LandingPage'
 import { GoogleCallbackPage } from './features/plugins/GoogleCallbackPage'
 import { PluginsPage } from './features/plugins/PluginsPage'
+import { SignaturesPage } from './features/signatures/SignaturesPage'
 import { TeamPage } from './features/team/TeamPage'
 import { TemplateGallery } from './features/templates/TemplateGallery'
 import { TemplateStart } from './features/templates/TemplateStart'
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="new" element={<BookingEditor />} />
           <Route path="bookings" element={<BookingsList />} />
           <Route path="bookings/:id" element={<BookingEditor />} />
+          <Route path="signatures" element={<SignaturesPage />} />
           <Route path="team" element={<TeamPage />} />
           <Route path="plugins" element={<PluginsPage />} />
           <Route path="*" element={<Navigate to="/templates" replace />} />

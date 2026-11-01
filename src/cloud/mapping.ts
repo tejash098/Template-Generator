@@ -1,9 +1,10 @@
 import type { PadColorId } from '../document/padColors'
 import { isPadColorId } from '../document/padColors'
 import type { PageSpec } from '../document/pageSizes'
-import type { BookingRecord } from '../storage/db'
+import { asSignatureMark } from '../document/signature'
+import type { BookingRecord, SignatureRecord } from '../storage/db'
 import { isTemplateId } from '../templates/ids'
-import type { RemoteBooking, RemoteBookingInsert } from './cloudApi'
+import type { RemoteBooking, RemoteBookingInsert, RemoteSignature, RemoteSignatureInsert } from './cloudApi'
 
 /*
  * Local BookingRecord (camelCase, epoch ms) <-> Supabase bookings row
@@ -53,6 +54,7 @@ export function toRemote(record: BookingRecord, ctx: RemoteContext): RemoteBooki
     share_pdf_path: record.sharePdfPath ?? null,
     share_png_path: record.sharePngPath ?? null,
     share_rendered_at: record.shareRenderedAt ?? null,
+    signature: (record.signature ?? null) as RemoteBookingInsert['signature'],
   }
 }
 
@@ -102,5 +104,40 @@ export function fromRemote(row: RemoteBooking, existing?: BookingRecord): Bookin
     sharePdfPath: row.share_pdf_path ?? undefined,
     sharePngPath: row.share_png_path ?? undefined,
     shareRenderedAt: row.share_rendered_at ?? undefined,
+    signature: asSignatureMark(row.signature),
+  }
+}
+
+/** The member's signature library row; the server stamps `user_id` from the session. */
+export function signatureToRemote(record: SignatureRecord, ctx: RemoteContext): RemoteSignatureInsert {
+  return {
+    id: record.id,
+    organization_id: record.organizationId ?? ctx.organizationId,
+    user_id: record.createdBy ?? ctx.userId,
+    label: record.label,
+    mark: record.mark as unknown as RemoteSignatureInsert['mark'],
+    client_updated_at: record.updatedAt,
+    deleted_at: record.deletedAt ? new Date(record.deletedAt).toISOString() : null,
+  }
+}
+
+/**
+ * A pulled signature, or null when its mark fails validation (it is then
+ * skipped rather than stored, so a bad row can never reach a receipt).
+ */
+export function signatureFromRemote(row: RemoteSignature, existing?: SignatureRecord): SignatureRecord | null {
+  const mark = asSignatureMark(row.mark)
+  if (!mark) return null
+  return {
+    id: row.id,
+    label: row.label,
+    mark,
+    createdAt: existing?.createdAt ?? Date.parse(row.created_at),
+    updatedAt: row.client_updated_at,
+    dirty: 0,
+    deletedAt: row.deleted_at ? Date.parse(row.deleted_at) : undefined,
+    syncedAt: Date.now(),
+    organizationId: row.organization_id,
+    createdBy: row.user_id,
   }
 }

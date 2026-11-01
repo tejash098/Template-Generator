@@ -10,6 +10,8 @@ import {
   type Membership,
   type RemoteBooking,
   type RemoteBookingInsert,
+  type RemoteSignature,
+  type RemoteSignatureInsert,
 } from './cloudApi'
 
 const SHARE_BUCKET = 'share-files'
@@ -94,6 +96,20 @@ export function supabaseCloud(client: AppSupabaseClient): CloudApi {
         if (error.code === UNIQUE_VIOLATION) throw new BookingNoConflictError(row.id)
         throw error
       }
+    },
+
+    async pullSignaturesSince(cursor, limit): Promise<RemoteSignature[]> {
+      // RLS returns only the signed-in member's own rows.
+      let query = client.from('signatures').select('*').order('updated_at', { ascending: true }).limit(limit)
+      if (cursor) query = query.gt('updated_at', cursor)
+      const { data, error } = await query
+      if (error) throw error
+      return data ?? []
+    },
+
+    async pushSignature(row: RemoteSignatureInsert) {
+      const { error } = await client.from('signatures').upsert(row, { onConflict: 'id' })
+      if (error) throw error
     },
 
     subscribe(organizationId, onChange) {

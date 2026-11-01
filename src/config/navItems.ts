@@ -1,4 +1,4 @@
-import { Bus, LayoutGrid, Puzzle, Users, type LucideIcon } from 'lucide-react'
+import { Bus, LayoutGrid, Puzzle, Signature, Users, type LucideIcon } from 'lucide-react'
 import type { StringKey } from '../i18n/strings'
 
 export interface NavItemDef {
@@ -17,6 +17,7 @@ export interface NavItemDef {
 export const NAV_ITEMS: NavItemDef[] = [
   { id: 'templates', labelKey: 'nav.templates', path: '/templates', icon: LayoutGrid, end: true },
   { id: 'bookings', labelKey: 'nav.bookings', path: '/bookings', icon: Bus },
+  { id: 'signatures', labelKey: 'nav.signatures', path: '/signatures', icon: Signature },
   { id: 'plugins', labelKey: 'nav.plugins', path: '/plugins', icon: Puzzle, memberOnly: true },
   { id: 'team', labelKey: 'nav.team', path: '/team', icon: Users, ownerOnly: true },
 ]

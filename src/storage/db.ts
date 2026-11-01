@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { BookingContent } from '../document/BookingSheet'
 import type { PageSpec } from '../document/pageSizes'
+import type { SignatureMark } from '../document/signature'
 import type { TemplateId } from '../templates/ids'
 
 /**
@@ -29,6 +30,25 @@ export interface BookingRecord extends BookingContent {
   shareRenderedAt?: number
 }
 
+/**
+ * One saved signature in the signed-in member's library (or this device's,
+ * when signed out). Synced to Supabase `signatures`; bookings keep their own
+ * snapshot of the mark, so deleting a signature never changes a receipt.
+ */
+export interface SignatureRecord {
+  id: string
+  /** Shown in the picker; the typed text, or "Drawn"/"Uploaded" plus a date. */
+  label: string
+  mark: SignatureMark
+  createdAt: number
+  updatedAt: number
+  dirty: 0 | 1
+  deletedAt?: number
+  syncedAt?: number
+  organizationId?: string
+  createdBy?: string
+}
+
 /** A block of booking numbers reserved from the server for this device. */
 export interface NumberBlock {
   start: number
@@ -46,6 +66,7 @@ export interface MetaValues {
   numberBlocks: NumberBlock[]
   provisionalCounter: number
   syncCursor: string
+  signatureCursor: string
 }
 export type MetaKey = keyof MetaValues
 
@@ -56,6 +77,7 @@ export interface MetaRecord<K extends MetaKey = MetaKey> {
 
 export type AppDb = Dexie & {
   bookings: EntityTable<BookingRecord, 'id'>
+  signatures: EntityTable<SignatureRecord, 'id'>
   meta: EntityTable<MetaRecord, 'key'>
 }
 
@@ -117,6 +139,13 @@ export function createDb(name = 'srbs-letters'): AppDb {
           row.issuedByName = row.issuedByName ?? ''
         }),
     )
+  // v5: the signature library. Bookings gain an optional `signature`
+  // snapshot, which needs no index and no upgrade (absent = print the name).
+  db.version(5).stores({
+    bookings: 'id, seq, bookingDate, travelDate, updatedAt, dirty, deletedAt',
+    signatures: 'id, updatedAt, dirty, deletedAt',
+    meta: 'key',
+  })
   return db
 }
 

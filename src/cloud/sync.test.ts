@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createDb, getMeta, setMeta, type AppDb } from '../storage/db'
 import { bookingsRepo, newBookingFields } from '../storage/bookings'
 import { setNumberingMode } from '../storage/numbering'
+import { signaturesRepo } from '../storage/signatures'
 import { createFakeCloud } from './fakeCloud'
 import { allShareFilePaths, createShareLink } from './shareFiles'
 import { createSyncEngine, type SyncEngine } from './sync'
@@ -256,3 +257,48 @@ describe('share files', () => {
     expect(cloud.rows.get(c.id)?.deleted_at).toBeTruthy()
   })
 })
+
+describe('signature sync', () => {
+  const mark = { kind: 'typed', text: 'Sunil', font: 'great-vibes', ink: 'blue' } as const
+
+  it('pushes a signature made signed out as the member’s, then marks it clean', async () => {
+    const sig = await signaturesRepo(db).create('Sunil', mark)
+    expect(sig.createdBy).toBeUndefined()
+    await engine.runSync()
+
+    const remote = cloud.signatureRows.get(sig.id)
+    expect(remote).toMatchObject({ organization_id: 'org-1', user_id: 'user-1', label: 'Sunil' })
+    expect(remote?.mark).toEqual(mark)
+    const local = await db.signatures.get(sig.id)
+    expect(local).toMatchObject({ dirty: 0, createdBy: 'user-1', organizationId: 'org-1' })
+  })
+
+  it('pulls signatures from the member’s other devices, deletes included, and skips invalid ones', async () => {
+    // Written straight to the fake server (another device), on the fake server clock.
+    const base = { organization_id: 'org-1', user_id: 'user-1', label: 'Drawn', client_updated_at: 10 }
+    await cloud.pushSignature({ ...base, id: 'remote-sig', mark: { kind: 'drawn', width: 300, height: 200, strokes: [[6, 6, 80, 90]], ink: 'black' } })
+    await cloud.pushSignature({ ...base, id: 'bad-sig', mark: { kind: 'image', dataUrl: 'https://example.com/x.png', width: 1, height: 1 } })
+    await engine.runSync()
+    expect((await signaturesRepo(db).list('user-1')).map((s) => s.id)).toEqual(['remote-sig'])
+    expect(await db.signatures.get('bad-sig')).toBeUndefined()
+
+    await cloud.pushSignature({ ...cloud.signatureRows.get('remote-sig')!, deleted_at: '2026-01-02T00:00:00.000Z', client_updated_at: 11 })
+    await engine.runSync()
+    expect(await signaturesRepo(db).list('user-1')).toEqual([])
+  })
+
+  it('keeps a newer local edit over an older remote one and never pushes another member’s row', async () => {
+    const repo = signaturesRepo(db)
+    const sig = await repo.create('Sunil', mark)
+    await engine.runSync()
+    await repo.remove(sig.id) // local delete, newer clock
+    await cloud.pushSignature({ ...cloud.signatureRows.get(sig.id)!, label: 'old remote', client_updated_at: 1 })
+    await db.signatures.put({ ...sig, id: 'theirs', createdBy: 'user-2', dirty: 1 })
+    await engine.runSync()
+
+    expect(cloud.signatureRows.get(sig.id)?.deleted_at).toBeTruthy()
+    expect(cloud.signatureRows.has('theirs')).toBe(false)
+    expect((await db.signatures.get('theirs'))?.dirty).toBe(1)
+  })
+})
+
