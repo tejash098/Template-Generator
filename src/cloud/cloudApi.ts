@@ -26,6 +26,8 @@ export interface Member {
 
 export type RemoteBooking = Database['public']['Tables']['bookings']['Row']
 export type RemoteBookingInsert = Database['public']['Tables']['bookings']['Insert']
+export type RemoteSignature = Database['public']['Tables']['signatures']['Row']
+export type RemoteSignatureInsert = Database['public']['Tables']['signatures']['Insert']
 
 export interface NumberBlockRange {
   start: number
@@ -76,6 +78,10 @@ export interface CloudApi {
   pullSince(cursor: string | null, limit: number): Promise<RemoteBooking[]>
   /** Upsert one row; rejects with BookingNoConflictError on a number clash. */
   pushRow(row: RemoteBookingInsert): Promise<void>
+  /** The member's own signatures changed after `cursor` (ISO timestamp), oldest first. */
+  pullSignaturesSince(cursor: string | null, limit: number): Promise<RemoteSignature[]>
+  /** Upsert one of the member's signatures (stale writes are dropped by the LWW trigger). */
+  pushSignature(row: RemoteSignatureInsert): Promise<void>
   /** Live change notifications for the organization; returns an unsubscribe. */
   subscribe(organizationId: string, onChange: () => void): () => void
   uploadShareFile(path: string, blob: Blob, contentType: string): Promise<void>

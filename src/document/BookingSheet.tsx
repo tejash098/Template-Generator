@@ -5,6 +5,8 @@ import { buildBookingProse } from './bookingText'
 import { formatDateDdMmYyyy } from './format'
 import { PAD_COLORS, type PadColorId } from './padColors'
 import { pageDimensionsMm, type PageSpec } from './pageSizes'
+import type { SignatureMark as SignatureMarkData } from './signature'
+import { SignatureMark } from './SignatureMark'
 import { useFitText } from './useFitText'
 import './sheet.css'
 
@@ -34,6 +36,8 @@ export interface BookingContent {
   mobile2: string
   bus: string
   padColor: PadColorId
+  /** Snapshot of the issuer's chosen signature; printed in place of `issuedByName`. */
+  signature?: SignatureMarkData | null
 }
 
 interface BookingSheetProps {
@@ -51,7 +55,8 @@ const NBSP = ' '
 /**
  * One finished page: the fixed letterhead (in the chosen pad colour) + the
  * booking written as prose + the customer's phones/bus line and signature on
- * the left, the booking date and issuing staff name on the right. On the
+ * the left, the booking date and issuing staff name (or their signature) on
+ * the right. On the
  * "blank" pad the letterhead artwork keeps its space but paints nothing, so the
  * same layout lands on a physical pre-printed pad. A copy carries a diagonal
  * COPY stamp behind everything, on every pad including the blank one. This
@@ -113,7 +118,13 @@ export function BookingSheet({ content, page, copyMark = false, onFitChange, ref
 
             <div className="lh-party lh-party-right lh-issuer">
               <div>{formatDateDdMmYyyy(content.bookingDate)}</div>
-              <div className="lh-issuer-name">{content.issuedByName.trim() || NBSP}</div>
+              {content.signature ? (
+                <div className="lh-issuer-sign">
+                  <SignatureMark mark={content.signature} />
+                </div>
+              ) : (
+                <div className="lh-issuer-name">{content.issuedByName.trim() || NBSP}</div>
+              )}
             </div>
           </div>
         </div>

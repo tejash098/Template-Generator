@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../../cloud/useAuth'
 import { Button } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
@@ -13,10 +14,12 @@ import { FIT_WARN_SCALE } from '../../document/useFitText'
 import { useLocale } from '../../i18n/useLocale'
 import type { BookingRecord } from '../../storage/db'
 import { bookings, type BookingFields } from '../../storage/bookings'
+import { signatures } from '../../storage/signatures'
 import { TEMPLATES, isTemplateId } from '../../templates/registry'
 import { useTransliterationPref } from '../../transliteration/useTransliterationPref'
 import { BookingForm } from './BookingForm'
 import { ExportBar } from './ExportBar'
+import { SignaturePicker } from './SignaturePicker'
 import { SheetPreview } from './SheetPreview'
 
 type SaveStatus = 'new' | 'loading' | 'saving' | 'saved' | 'error' | 'missing'
@@ -35,13 +38,15 @@ function pickFields(rec: BookingRecord): BookingFields {
  * Form + live preview for one booking. Routes: `/new?template=…&color=…`
  * (the record is created on the first edit so abandoned blank drafts never
  * consume a पत्रांक) and `/bookings/:id`. Every change autosaves after a
- * short delay.
+ * short delay. `?signature=<id>` (set by the Signatures page after "Create
+ * signature") applies that saved signature once the booking has loaded.
  */
 export function BookingEditor() {
   const { id } = useParams<{ id: string }>()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const { t } = useLocale()
+  const { user } = useAuth()
 
   const requestedTemplate = params.get('template') ?? 'bus-booking'
   const requestedColor = params.get('color')
@@ -178,7 +183,7 @@ export function BookingEditor() {
     [persist],
   )
 
-  const update = (patch: Partial<BookingFields>) => {
+  const update = useCallback((patch: Partial<BookingFields>) => {
     dirtyRef.current = true
     setPendingEdits(true)
     setFields((prev) => {
@@ -189,6 +194,47 @@ export function BookingEditor() {
       }
       return next
     })
+  }, [])
+
+  // Back from "Create signature": apply the new signature once the booking is
+  // loaded (or the blank draft is ready), then drop the parameter.
+  const signatureParam = params.get('signature')
+  useEffect(() => {
+    if (!signatureParam || (status !== 'saved' && status !== 'new')) return
+    let cancelled = false
+    signatures.get(signatureParam).then((sig) => {
+      if (cancelled) return
+      if (sig) update({ signature: sig.mark })
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('signature')
+          return next
+        },
+        { replace: true },
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [signatureParam, status, update, setParams])
+
+  /** Waits for every pending or in-flight save; returns the stored booking, if any. */
+  const flushSave = async (): Promise<BookingRecord | null> => {
+    if (dirtyRef.current) {
+      dirtyRef.current = false
+      await persist(latestFieldsRef.current)
+    } else if (creatingRef.current) {
+      await creatingRef.current
+    }
+    return recordRef.current
+  }
+
+  /** "Create signature": save the form, then visit the Signatures page and come back. */
+  const createSignature = async () => {
+    const saved = await flushSave()
+    const back = saved ? template.routes.edit(saved.id) : template.routes.newWith(fields.padColor)
+    navigate(`/signatures?return=${encodeURIComponent(back)}`)
   }
 
   const handleDuplicate = async () => {
@@ -270,6 +316,15 @@ export function BookingEditor() {
               offLabel={t('editor.copyMark.original')}
               onLabel={t('editor.copyMark.copy')}
               label={t('editor.copyMark.label')}
+            />
+          </div>
+
+          <div className="mt-3 flex items-center">
+            <SignaturePicker
+              value={fields.signature}
+              onChange={(signature) => update({ signature })}
+              onCreate={createSignature}
+              ownerId={user?.id}
             />
           </div>
 

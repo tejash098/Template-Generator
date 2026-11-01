@@ -1,8 +1,10 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { BookingSheet, type BookingContent } from './BookingSheet'
+import { formatDateDdMmYyyy } from './format'
 import { BOOKING_TEXT } from './letterheadContent'
 import { DEFAULT_PAGE } from './pageSizes'
+import type { SignatureMark } from './signature'
 
 const content: BookingContent = {
   bookingNo: '0001',
@@ -42,3 +44,28 @@ describe('BookingSheet COPY watermark', () => {
     }
   })
 })
+
+describe('BookingSheet issuer signature', () => {
+  it('prints the staff name when there is no signature', () => {
+    const { container } = render(<BookingSheet content={content} page={DEFAULT_PAGE} />)
+    expect(container.querySelector('.lh-issuer-name')?.textContent).toBe('सुनील')
+    expect(container.querySelector('.lh-issuer-sign')).toBeNull()
+  })
+
+  it('replaces the name with each kind of signature, under the booking date', () => {
+    const marks: SignatureMark[] = [
+      { kind: 'typed', text: 'Sunil Kumar', font: 'great-vibes', ink: 'blue' },
+      { kind: 'drawn', width: 300, height: 200, strokes: [[6, 6, 80, 90, 150, 20]], ink: 'black' },
+      { kind: 'image', dataUrl: 'data:image/png;base64,AAAA', width: 60, height: 20 },
+    ]
+    for (const signature of marks) {
+      const { container, unmount } = render(<BookingSheet content={{ ...content, signature }} page={DEFAULT_PAGE} />)
+      const issuer = container.querySelector('.lh-issuer')
+      expect(issuer?.querySelector('.lh-issuer-name')).toBeNull()
+      expect(issuer?.firstElementChild?.textContent).toBe(formatDateDdMmYyyy(content.bookingDate))
+      expect(issuer?.querySelector(`.lh-issuer-sign .sig-${signature.kind}`)).not.toBeNull()
+      unmount()
+    }
+  })
+})
+

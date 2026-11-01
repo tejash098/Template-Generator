@@ -232,6 +232,30 @@
   font-weight: 700;
 }
 
+/* The issuer's signature in place of the name: a fixed-height box so the
+   layout (and the fit-to-page scale) does not wait for images or fonts. */
+.lh-issuer-sign {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  height: calc(var(--u) * 7);
+  max-width: calc(var(--u) * 34);
+  font-size: calc(var(--u) * 5.2);
+  line-height: 1.1;
+}
+
+.lh-issuer-sign .sig-drawn,
+.lh-issuer-sign .sig-image {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.lh-issuer-sign .sig-typed {
+  white-space: nowrap;
+}
+
 /* ---- Letterhead footer --------------------------------------------------- */
 .lh-foot {
   flex: none;

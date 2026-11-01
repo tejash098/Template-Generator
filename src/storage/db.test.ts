@@ -21,8 +21,8 @@ describe('database migrations', () => {
     const v2 = createDb(name)
     await v2.open()
     const tables = v2.tables.map((t) => t.name).sort()
-    expect(tables).toEqual(['bookings', 'meta'])
-    expect(v2.verno).toBe(4)
+    expect(tables).toEqual(['bookings', 'meta', 'signatures'])
+    expect(v2.verno).toBe(5)
 
     const created = await bookingsRepo(v2).create()
     expect(created.bookingNo).toBe('0005')

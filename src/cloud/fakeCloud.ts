@@ -6,6 +6,8 @@ import type {
   Membership,
   RemoteBooking,
   RemoteBookingInsert,
+  RemoteSignature,
+  RemoteSignatureInsert,
 } from './cloudApi'
 import { BookingNoConflictError, CalendarCallError } from './cloudApi'
 
@@ -15,6 +17,7 @@ import { BookingNoConflictError, CalendarCallError } from './cloudApi'
  */
 export function createFakeCloud(options: { membership?: Membership | null; online?: () => boolean } = {}) {
   const rows = new Map<string, RemoteBooking>()
+  const signatureRows = new Map<string, RemoteSignature>()
   let clock = 0
   let counter = 1
   const listeners = new Set<() => void>()
@@ -53,6 +56,7 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
 
   const api: CloudApi & {
     rows: Map<string, RemoteBooking>
+    signatureRows: Map<string, RemoteSignature>
     counter: () => number
     /** Storage paths uploaded / removed, in order. */
     uploads: string[]
@@ -67,6 +71,7 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
     uploads,
     removed,
     rows,
+    signatureRows,
     calendar,
     emitCalendar: () => calendarListeners.forEach((l) => l()),
     counter: () => counter,
@@ -115,6 +120,28 @@ export function createFakeCloud(options: { membership?: Membership | null; onlin
       const existing = rows.get(row.id)
       if (existing && row.client_updated_at < existing.client_updated_at) return // bookings_lww trigger
       rows.set(row.id, { ...(existing ?? blankRow(row.id)), ...row, updated_at: tick() } as RemoteBooking)
+    },
+    async pullSignaturesSince(cursor, limit) {
+      requireOnline()
+      return [...signatureRows.values()]
+        .filter((r) => !cursor || r.updated_at > cursor)
+        .sort((a, b) => (a.updated_at < b.updated_at ? -1 : 1))
+        .slice(0, limit)
+    },
+    async pushSignature(row: RemoteSignatureInsert) {
+      requireOnline()
+      const existing = signatureRows.get(row.id)
+      if (existing && row.client_updated_at < existing.client_updated_at) return // signatures_a_lww trigger
+      const now = tick()
+      signatureRows.set(row.id, {
+        label: '',
+        deleted_at: null,
+        created_at: existing?.created_at ?? now,
+        user_id: 'user-1',
+        ...existing,
+        ...row,
+        updated_at: now,
+      } as RemoteSignature)
     },
     subscribe(_org, onChange) {
       listeners.add(onChange)
@@ -221,5 +248,6 @@ function blankRow(id: string): RemoteBooking {
     share_pdf_path: null,
     share_png_path: null,
     share_rendered_at: null,
+    signature: null,
   }
 }
