@@ -8,6 +8,7 @@ import { A11Y, TRANSITION } from '../../config/constants'
 import { formatDateDdMmYyyy } from '../../document/format'
 import { useLocale } from '../../i18n/useLocale'
 import type { BookingRecord } from '../../storage/db'
+import { useToast } from '../../toast/useToast'
 import { calendarErrorKey, calendarErrorKeyFor } from '../plugins/calendarError'
 
 const ICON_BUTTON = `relative inline-flex items-center justify-center rounded-lg border border-border bg-surface p-1.5 text-text-primary hover:bg-accent-subtle hover:text-accent disabled:cursor-default disabled:opacity-60 ${TRANSITION.COLORS} ${A11Y.FOCUS_RING}`
@@ -33,6 +34,7 @@ function Badge({ className, children }: { className: string; children: ReactNode
 export function CalendarButton({ booking }: { booking: BookingRecord }) {
   const cal = useCalendar()
   const { t } = useLocale()
+  const { addToast } = useToast()
   const [dialog, setDialog] = useState<'add' | 'added' | 'failed' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -63,18 +65,20 @@ export function CalendarButton({ booking }: { booking: BookingRecord }) {
           : t('calendar.add')
   const vars = { no: booking.bookingNo, date: formatDateDdMmYyyy(booking.travelDate), email: connection.accountEmail }
 
-  const run = async (work: () => Promise<void>) => {
+  const run = async (work: () => Promise<void>, done: string) => {
     setDialog(null)
     setError(null)
     try {
       await work()
+      addToast({ key: `calendar-${booking.id}`, message: done })
     } catch (err) {
+      // Failures keep the dialog: it explains the error and offers the next step.
       setError(t(calendarErrorKey(err)))
       setDialog('failed')
     }
   }
-  const add = () => run(() => cal.add(booking.id))
-  const remove = () => run(() => cal.remove(booking.id))
+  const add = () => run(() => cal.add(booking.id), t('toast.calendarAdded', { no: booking.bookingNo }))
+  const remove = () => run(() => cal.remove(booking.id), t('toast.calendarRemoved', { no: booking.bookingNo }))
 
   return (
     <>

@@ -8,14 +8,13 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { FORM, ICON_SIZE } from '../../config/constants'
 import { useLocale } from '../../i18n/useLocale'
 import { PageLayout } from '../../layouts/PageLayout'
+import { useToast } from '../../toast/useToast'
 import { calendarErrorKey, type PluginsRouteState } from './calendarError'
 import { PluginCard } from './PluginCard'
 import { ViaGoogleCard } from './ViaGoogleCard'
 
 /** Google sends the browser back to a web address; the file:// shells must connect from the website. */
 const CAN_REDIRECT = typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol)
-
-type Notice = { tone: 'ok' | 'error'; text: string } | null
 
 /**
  * Each member connects their own Google Calendar here (DocuDrive's "Plugins"
@@ -29,27 +28,27 @@ export function PluginsPage() {
   const { t } = useLocale()
   const location = useLocation()
   const navigate = useNavigate()
-  const [notice, setNotice] = useState<Notice>(() => {
-    const state = location.state as PluginsRouteState
-    if (state?.error) return { tone: 'error', text: t(state.error) }
-    if (state?.notice === 'connected') return { tone: 'ok', text: t('plugins.google.connected') }
-    return null
-  })
+  const { addToast } = useToast()
   const [working, setWorking] = useState(false)
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
 
-  // The notice came through router state; drop it so a reload doesn't repeat it.
+  // Back from Google: announce the result carried in router state, then drop
+  // it so a reload doesn't repeat it. Keyed, so StrictMode's second run
+  // replaces the toast instead of adding another.
   useEffect(() => {
-    if (location.state) navigate(location.pathname, { replace: true, state: null })
-  }, [location.state, location.pathname, navigate])
+    const state = location.state as PluginsRouteState
+    if (!state) return
+    if (state.error) addToast({ key: 'plugins-return', type: 'error', message: t(state.error) })
+    else if (state.notice === 'connected') addToast({ key: 'plugins-return', message: t('plugins.google.connected') })
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.state, location.pathname, navigate, addToast, t])
 
   const connect = async () => {
     setWorking(true)
-    setNotice(null)
     try {
       await cal.connect('/plugins') // leaves the page for Google
     } catch (err) {
-      setNotice({ tone: 'error', text: t(calendarErrorKey(err)) })
+      addToast({ type: 'error', message: t(calendarErrorKey(err)) })
       setWorking(false)
     }
   }
@@ -57,12 +56,11 @@ export function PluginsPage() {
   const disconnect = async () => {
     setConfirmDisconnect(false)
     setWorking(true)
-    setNotice(null)
     try {
       await cal.disconnect()
-      setNotice({ tone: 'ok', text: t('plugins.google.disconnected') })
+      addToast({ message: t('plugins.google.disconnected') })
     } catch (err) {
-      setNotice({ tone: 'error', text: t(calendarErrorKey(err)) })
+      addToast({ type: 'error', message: t(calendarErrorKey(err)) })
     } finally {
       setWorking(false)
     }
@@ -133,11 +131,6 @@ export function PluginsPage() {
       <div className="flex max-w-2xl flex-col gap-4">
         <PluginCard icon={CalendarDays} name={t('plugins.google.name')} description={t('plugins.google.desc')}>
           {body}
-          {notice && (
-            <p className={`text-sm ${notice.tone === 'ok' ? 'text-success' : 'text-danger'}`} role="status">
-              {notice.text}
-            </p>
-          )}
         </PluginCard>
 
         <ViaGoogleCard

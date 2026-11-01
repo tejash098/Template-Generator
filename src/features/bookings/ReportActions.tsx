@@ -10,6 +10,7 @@ import { getExporter } from '../../export'
 import { useLocale } from '../../i18n/useLocale'
 import type { BookingRecord } from '../../storage/db'
 import type { TravelDateRange } from '../../storage/bookings'
+import { useToast } from '../../toast/useToast'
 
 type Action = 'pdf' | 'print'
 
@@ -45,11 +46,11 @@ interface ReportActionsProps {
  */
 export function ReportActions({ rows, range }: ReportActionsProps) {
   const { t } = useLocale()
+  const { addToast } = useToast()
   const exporter = getExporter()
   const reportRef = useRef<HTMLDivElement>(null)
   const [pages, setPages] = useState<ReportPage[] | null>(null)
   const [busy, setBusy] = useState<Action | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
   const subtitle = rangeLabel(range)
 
   /** Renders the report synchronously and waits until it is painted with its fonts. */
@@ -64,12 +65,11 @@ export function ReportActions({ rows, range }: ReportActionsProps) {
   const run = async (action: Action, fn: (nodes: HTMLElement[]) => Promise<void>) => {
     if (busy || !rows?.length) return
     setBusy(action)
-    setMessage(null)
     try {
       await fn(await mountReport())
     } catch (err) {
       setPages(null)
-      setMessage(err instanceof Error ? err.message : t('export.failed'))
+      addToast({ type: 'error', message: t('export.failed'), detail: err instanceof Error ? err.message : undefined })
     } finally {
       setBusy(null)
     }
@@ -108,11 +108,6 @@ export function ReportActions({ rows, range }: ReportActionsProps) {
       <Button disabled={disabled} onClick={print} icon={icon(Printer)}>
         {busy === 'print' ? t('export.working') : t('export.print')}
       </Button>
-      {message && (
-        <span className="text-sm text-danger" role="alert">
-          {message}
-        </span>
-      )}
       {pages &&
         createPortal(
           <div className="report-print-root pointer-events-none fixed top-0 -left-[300vw]" aria-hidden="true">

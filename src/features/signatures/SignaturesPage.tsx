@@ -16,6 +16,7 @@ import { useLocale } from '../../i18n/useLocale'
 import { PageLayout } from '../../layouts/PageLayout'
 import type { SignatureRecord } from '../../storage/db'
 import { signatures } from '../../storage/signatures'
+import { useToast } from '../../toast/useToast'
 import { safeReturnPath, withSignatureParam } from './returnPath'
 import { SignaturePad } from './SignaturePad'
 import { TypePanel } from './TypePanel'
@@ -34,6 +35,7 @@ export function SignaturesPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const { status, user } = useAuth()
+  const { addToast } = useToast()
   const returnPath = safeReturnPath(params.get('return'))
 
   const saved = useLiveQuery(() => signatures.list(user?.id), [user?.id])
@@ -44,7 +46,6 @@ export function SignaturesPage() {
   const [strokes, setStrokes] = useState<number[][]>([])
   const [image, setImage] = useState<UploadedSignature | null>(null)
   const [saving, setSaving] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
   const [toDelete, setToDelete] = useState<SignatureRecord | null>(null)
 
   // The chosen style must belong to the script being typed; otherwise use the first.
@@ -72,6 +73,7 @@ export function SignaturesPage() {
     setSaving(true)
     try {
       const record = await signatures.create(labelFor(mark), mark)
+      // Going back to a booking: the editor announces "Signature added to booking …".
       if (returnPath) {
         navigate(withSignatureParam(returnPath, record.id))
         return
@@ -79,7 +81,7 @@ export function SignaturesPage() {
       setText('')
       setStrokes([])
       setImage(null)
-      setNotice(t('signatures.savedNotice'))
+      addToast({ message: t('signatures.savedNotice') })
     } finally {
       setSaving(false)
     }
@@ -99,6 +101,7 @@ export function SignaturesPage() {
     const id = toDelete.id
     setToDelete(null)
     await signatures.remove(id)
+    addToast({ message: t('toast.signatureDeleted') })
   }
 
   return (
@@ -139,10 +142,7 @@ export function SignaturesPage() {
             <SegmentedControl<Method>
               label={t('signatures.method')}
               value={method}
-              onChange={(m) => {
-                setMethod(m)
-                setNotice(null)
-              }}
+              onChange={setMethod}
               options={[
                 { value: 'type', label: t('signatures.tab.type') },
                 { value: 'draw', label: t('signatures.tab.draw') },
@@ -176,11 +176,6 @@ export function SignaturesPage() {
           {method === 'upload' && <UploadPanel image={image} onImageChange={setImage} />}
 
           {returnPath && <p className="text-xs text-text-secondary">{t('signatures.returnNote')}</p>}
-          {notice && (
-            <p className="text-sm text-success" role="status">
-              {notice}
-            </p>
-          )}
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button onClick={cancel}>{t('common.cancel')}</Button>

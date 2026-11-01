@@ -8,6 +8,7 @@ import { pageDimensionsMm, type PageSpec } from '../../document/pageSizes'
 import { getExporter, type ExportJob, type ImageFormat } from '../../export'
 import { useLocale } from '../../i18n/useLocale'
 import { db } from '../../storage/db'
+import { useToast } from '../../toast/useToast'
 
 interface ExportBarProps {
   sheetRef: RefObject<HTMLDivElement | null>
@@ -27,10 +28,9 @@ type Action = 'pdf' | 'png' | 'jpeg' | 'print' | 'share-pdf' | 'share-image' | '
 export function ExportBar({ sheetRef, page, fileStem: baseStem, title, ready, bookingId, copyMark = false }: ExportBarProps) {
   const { t } = useLocale()
   const { status: authStatus, membership, api } = useAuth()
+  const { addToast, dismissToast } = useToast()
   const exporter = getExporter()
   const [busy, setBusy] = useState<Action | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const dims = pageDimensionsMm(page)
   const fileStem = copyMark ? `${baseStem}-copy` : baseStem
   const canShareLink = authStatus === 'member' && !!membership && !!api && !!bookingId
@@ -42,11 +42,10 @@ export function ExportBar({ sheetRef, page, fileStem: baseStem, title, ready, bo
     const j = job()
     if (busy || !j) return
     setBusy(action)
-    setMessage(null)
     try {
       await fn(j)
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : t('export.failed'))
+      addToast({ type: 'error', message: t('export.failed'), detail: err instanceof Error ? err.message : undefined })
     } finally {
       setBusy(null)
     }
@@ -65,13 +64,15 @@ export function ExportBar({ sheetRef, page, fileStem: baseStem, title, ready, bo
     run(kind === 'pdf' ? 'share-pdf' : 'share-image', async (j) => {
       const blob = kind === 'pdf' ? await exporter.toPdf(j) : await exporter.toImage(j, 'png')
       const result = await exporter.share(blob, `${fileStem}.${kind === 'pdf' ? 'pdf' : 'png'}`, title)
-      if (result === 'unsupported') setMessage(t('export.shareUnsupported'))
+      if (result === 'unsupported') addToast({ type: 'info', message: t('export.shareUnsupported') })
     })
 
   const shareLink = (kind: ShareKind) =>
     run(kind === 'pdf' ? 'link-pdf' : 'link-png', async (j) => {
       if (!api || !membership || !bookingId) return
-      setNotice(t('share.preparing'))
+      // One keyed toast per kind: "Preparing link…" turns into the result.
+      const key = `share-${kind}`
+      addToast({ key, type: 'loading', message: t('share.preparing'), duration: null })
       try {
         const url = await createShareLink({
           api,
@@ -85,19 +86,19 @@ export function ExportBar({ sheetRef, page, fileStem: baseStem, title, ready, bo
         if (typeof navigator.share === 'function') {
           try {
             await navigator.share({ url, title })
-            setNotice(t('share.opened'))
+            addToast({ key, message: t('share.opened') })
             return
           } catch (err) {
             if ((err as Error).name === 'AbortError') {
-              setNotice(null)
+              dismissToast(key)
               return
             }
           }
         }
         await navigator.clipboard.writeText(url)
-        setNotice(t('share.copied'))
+        addToast({ key, message: t('share.copied') })
       } catch (err) {
-        setNotice(null)
+        dismissToast(key)
         throw new Error(t('share.failed', { error: err instanceof Error ? err.message : String(err) }), { cause: err })
       }
     })
@@ -142,18 +143,8 @@ export function ExportBar({ sheetRef, page, fileStem: baseStem, title, ready, bo
           </>
         )}
       </div>
-      {notice && (
-        <p className="mt-2 text-sm text-success" role="status">
-          {notice}
-        </p>
-      )}
       {!ready && <p className="mt-2 text-xs text-text-secondary">{t('export.notReady')}</p>}
       {ready && exporter.pdfKind === 'raster' && <p className="mt-2 text-xs text-text-secondary">{t('export.rasterHint')}</p>}
-      {message && (
-        <p className="mt-2 text-sm text-danger" role="alert">
-          {message}
-        </p>
-      )}
     </div>
   )
 }

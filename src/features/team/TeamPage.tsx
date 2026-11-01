@@ -11,6 +11,7 @@ import { Modal } from '../../components/ui/Modal'
 import { FORM, ICON_SIZE } from '../../config/constants'
 import { useLocale } from '../../i18n/useLocale'
 import { PageLayout } from '../../layouts/PageLayout'
+import { useToast } from '../../toast/useToast'
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
@@ -18,13 +19,13 @@ const errorText = (err: unknown) => (err instanceof Error ? err.message : String
 export function TeamPage() {
   const { status, user, membership, isOwner, api } = useAuth()
   const { t } = useLocale()
+  const { addToast } = useToast()
   const [members, setMembers] = useState<Member[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<MembershipRole>('staff')
   const [sending, setSending] = useState(false)
-  const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
   const [revoking, setRevoking] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
   const [editing, setEditing] = useState<Member | null>(null)
@@ -69,16 +70,15 @@ export function TeamPage() {
   const invite = async (e: FormEvent) => {
     e.preventDefault()
     setSending(true)
-    setNotice(null)
     try {
       await api.invite({ email: email.trim(), displayName: name.trim(), role })
-      setNotice({ tone: 'ok', text: t('team.invite.sent', { email: email.trim() }) })
+      addToast({ message: t('team.invite.sent', { email: email.trim() }) })
       setName('')
       setEmail('')
       setRole('staff')
       load()
     } catch (err) {
-      setNotice({ tone: 'error', text: t('team.invite.failed', { error: errorText(err) }) })
+      addToast({ type: 'error', message: t('team.invite.failed', { error: errorText(err) }) })
     } finally {
       setSending(false)
     }
@@ -90,10 +90,10 @@ export function TeamPage() {
     setRevoking(null)
     try {
       await api.revokeMember(membership.organizationId, target.userId)
-      setNotice({ tone: 'ok', text: t('team.revoked', { name: target.displayName || target.email }) })
+      addToast({ message: t('team.revoked', { name: target.displayName || target.email }) })
       load()
     } catch (err) {
-      setNotice({ tone: 'error', text: errorText(err) })
+      addToast({ type: 'error', message: t('toast.teamFailed'), detail: errorText(err) })
     }
   }
 
@@ -103,10 +103,10 @@ export function TeamPage() {
     setRemoving(null)
     try {
       await api.removeMember(membership.organizationId, target.userId)
-      setNotice({ tone: 'ok', text: t('team.removed', { name: target.displayName || target.email }) })
+      addToast({ message: t('team.removed', { name: target.displayName || target.email }) })
       load()
     } catch (err) {
-      setNotice({ tone: 'error', text: errorText(err) })
+      addToast({ type: 'error', message: t('toast.teamFailed'), detail: errorText(err) })
     }
   }
 
@@ -128,11 +128,11 @@ export function TeamPage() {
         displayName: editName.trim(),
         role: editRole,
       })
-      setNotice({ tone: 'ok', text: t('team.edit.saved', { name: editName.trim() || target.email }) })
+      addToast({ message: t('team.edit.saved', { name: editName.trim() || target.email }) })
       closeEdit()
       load()
     } catch (err) {
-      setNotice({ tone: 'error', text: t('team.edit.failed', { error: errorText(err) }) })
+      addToast({ type: 'error', message: t('team.edit.failed', { error: errorText(err) }) })
     } finally {
       setSaving(false)
     }
@@ -159,11 +159,6 @@ export function TeamPage() {
             <Button type="submit" variant="primary" disabled={sending} icon={<UserPlus size={ICON_SIZE.SM} aria-hidden="true" />}>
               {sending ? t('team.invite.working') : t('team.invite.submit')}
             </Button>
-            {notice && (
-              <p className={`text-sm ${notice.tone === 'ok' ? 'text-success' : 'text-danger'}`} role="status">
-                {notice.text}
-              </p>
-            )}
           </form>
         </Card>
 

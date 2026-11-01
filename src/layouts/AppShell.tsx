@@ -1,5 +1,6 @@
 import { Menu } from 'lucide-react'
 import { Outlet } from 'react-router-dom'
+import { SyncToasts } from '../cloud/SyncToasts'
 import { Sidebar } from '../components/nav/Sidebar'
 import { Logo } from '../components/ui/Logo'
 import { A11Y, ICON_SIZE, TRANSITION } from '../config/constants'
@@ -56,6 +57,7 @@ export function AppShell() {
 
         <main className="app-main flex flex-1 flex-col overflow-y-auto p-4 md:p-6">
           <Outlet />
+          <SyncToasts />
         </main>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { Switch } from '../../components/ui/Switch'
 import { EDITOR } from '../../config/constants'
 import type { BookingContent } from '../../document/BookingSheet'
+import type { SignatureMark } from '../../document/signature'
 import { fileStem, formatDateDdMmYyyy, nextDayIso } from '../../document/format'
 import { isPadColorId } from '../../document/padColors'
 import { FIT_WARN_SCALE } from '../../document/useFitText'
@@ -16,6 +17,7 @@ import type { BookingRecord } from '../../storage/db'
 import { bookings, type BookingFields } from '../../storage/bookings'
 import { signatures } from '../../storage/signatures'
 import { TEMPLATES, isTemplateId } from '../../templates/registry'
+import { useToast } from '../../toast/useToast'
 import { useTransliterationPref } from '../../transliteration/useTransliterationPref'
 import { BookingForm } from './BookingForm'
 import { ExportBar } from './ExportBar'
@@ -47,6 +49,7 @@ export function BookingEditor() {
   const navigate = useNavigate()
   const { t } = useLocale()
   const { user } = useAuth()
+  const { addToast } = useToast()
 
   const requestedTemplate = params.get('template') ?? 'bus-booking'
   const requestedColor = params.get('color')
@@ -148,9 +151,16 @@ export function BookingEditor() {
       } catch (err) {
         console.error(err)
         setStatus('error')
+        // Keyed: repeated failures update one toast instead of stacking.
+        addToast({
+          key: 'autosave',
+          type: 'error',
+          message: t('toast.saveFailed'),
+          detail: err instanceof Error ? err.message : undefined,
+        })
       }
     },
-    [navigate],
+    [navigate, addToast, t],
   )
 
   // Follow the stored row so edits synced from other devices reach an open
@@ -196,6 +206,20 @@ export function BookingEditor() {
     })
   }, [])
 
+  /** Puts a signature on (or takes it off) the booking and says so. */
+  const applySignature = useCallback(
+    (mark: SignatureMark | null) => {
+      update({ signature: mark })
+      const no = recordRef.current?.bookingNo
+      addToast(
+        mark
+          ? { key: 'signature', message: no ? t('toast.signatureAdded', { no }) : t('toast.signatureAddedDraft') }
+          : { key: 'signature', type: 'info', message: t('toast.signatureRemoved') },
+      )
+    },
+    [update, addToast, t],
+  )
+
   // Back from "Create signature": apply the new signature once the booking is
   // loaded (or the blank draft is ready), then drop the parameter.
   const signatureParam = params.get('signature')
@@ -204,7 +228,7 @@ export function BookingEditor() {
     let cancelled = false
     signatures.get(signatureParam).then((sig) => {
       if (cancelled) return
-      if (sig) update({ signature: sig.mark })
+      if (sig) applySignature(sig.mark)
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev)
@@ -217,7 +241,7 @@ export function BookingEditor() {
     return () => {
       cancelled = true
     }
-  }, [signatureParam, status, update, setParams])
+  }, [signatureParam, status, applySignature, setParams])
 
   /** Waits for every pending or in-flight save; returns the stored booking, if any. */
   const flushSave = async (): Promise<BookingRecord | null> => {
@@ -241,15 +265,18 @@ export function BookingEditor() {
     if (!record) return
     const copy = await bookings.duplicate(record.id)
     navigate(template.routes.edit(copy.id))
+    addToast({ message: t('toast.bookingDuplicated', { no: copy.bookingNo }) })
   }
 
   const handleDelete = async () => {
     if (!record) return
     setConfirmDelete(false)
+    const { bookingNo } = record
     await bookings.remove(record.id)
     loadedIdRef.current = null
     recordRef.current = null
     navigate(template.routes.list)
+    addToast({ message: t('toast.bookingDeleted', { no: bookingNo }) })
   }
 
   if (!id && !isTemplateId(requestedTemplate)) return <Navigate to="/templates" replace />
@@ -322,7 +349,7 @@ export function BookingEditor() {
           <div className="mt-3 flex items-center">
             <SignaturePicker
               value={fields.signature}
-              onChange={(signature) => update({ signature })}
+              onChange={applySignature}
               onCreate={createSignature}
               ownerId={user?.id}
             />

@@ -5,6 +5,8 @@ import { AuthContext, type AuthContextValue } from '../../cloud/AuthContext'
 import { CalendarContext, type CalendarContextValue } from '../../cloud/CalendarContext'
 import type { GoogleConnection } from '../../cloud/cloudApi'
 import { LocaleProvider } from '../../i18n/LocaleProvider'
+import { ToastProvider } from '../../toast/ToastProvider'
+import type { PluginsRouteState } from './calendarError'
 import { PluginsPage } from './PluginsPage'
 
 const auth: AuthContextValue = {
@@ -35,15 +37,17 @@ const calendar = (connection: GoogleConnection | null): CalendarContextValue => 
   reload: vi.fn(),
 })
 
-function show(connection: GoogleConnection | null) {
+function show(connection: GoogleConnection | null, routeState: PluginsRouteState = null) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[{ pathname: '/plugins', state: routeState }]}>
       <LocaleProvider>
-        <AuthContext.Provider value={auth}>
-          <CalendarContext.Provider value={calendar(connection)}>
-            <PluginsPage />
-          </CalendarContext.Provider>
-        </AuthContext.Provider>
+        <ToastProvider>
+          <AuthContext.Provider value={auth}>
+            <CalendarContext.Provider value={calendar(connection)}>
+              <PluginsPage />
+            </CalendarContext.Provider>
+          </AuthContext.Provider>
+        </ToastProvider>
       </LocaleProvider>
     </MemoryRouter>,
   )
@@ -88,5 +92,15 @@ describe('PluginsPage', () => {
   it('does not call a Google connection that needs a reconnect ready', () => {
     show({ status: 'needs_reauth', accountEmail: 'owner@gmail.test' })
     expect(card('Notion Calendar').textContent).toContain('Connect Google Calendar above first')
+  })
+
+  it('announces the result of a Google connect as a toast', async () => {
+    show({ status: 'connected', accountEmail: 'owner@gmail.test' }, { notice: 'connected' })
+    expect((await screen.findByRole('status')).textContent).toMatch(/connected/i)
+  })
+
+  it('shows a failed connect as an error toast', async () => {
+    show(null, { error: 'calendar.error.unexpected' })
+    expect(await screen.findByRole('alert')).toBeTruthy()
   })
 })

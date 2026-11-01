@@ -31,6 +31,7 @@ import { routeOAuthRedirect } from './cloud/oauthRedirect'
 import { LocaleProvider } from './i18n/LocaleProvider'
 import { SidebarProvider } from './layout/SidebarProvider'
 import { ThemeProvider } from './theme/ThemeProvider'
+import { ToastProvider } from './toast/ToastProvider'
 
 // Google returns from the Calendar consent to `/?code=…`; move that into the
 // hash route before HashRouter reads the URL.
@@ -40,13 +41,15 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <LocaleProvider>
-        <SidebarProvider>
-          <AuthProvider>
-            <CalendarProvider>
-              <App />
-            </CalendarProvider>
-          </AuthProvider>
-        </SidebarProvider>
+        <ToastProvider>
+          <SidebarProvider>
+            <AuthProvider>
+              <CalendarProvider>
+                <App />
+              </CalendarProvider>
+            </AuthProvider>
+          </SidebarProvider>
+        </ToastProvider>
       </LocaleProvider>
     </ThemeProvider>
   </StrictMode>,

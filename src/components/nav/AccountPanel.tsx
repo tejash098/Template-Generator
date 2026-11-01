@@ -7,6 +7,7 @@ import { A11Y, ICON_SIZE, TRANSITION } from '../../config/constants'
 import { useNow } from '../../hooks/useNow'
 import { useLocale } from '../../i18n/useLocale'
 import { bookings } from '../../storage/bookings'
+import { useToast } from '../../toast/useToast'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 
 const DOT: Record<SyncStatus, string> = {
@@ -29,6 +30,7 @@ export function AccountPanel({ compact }: { compact: boolean }) {
   const sync = useSyncState()
   const now = useNow()
   const { t } = useLocale()
+  const { addToast } = useToast()
   const [dialog, setDialog] = useState<'none' | 'confirm' | 'unsynced'>('none')
   const [pending, setPending] = useState(0)
 
@@ -65,6 +67,7 @@ export function AccountPanel({ compact }: { compact: boolean }) {
       setDialog('unsynced')
     } else {
       setDialog('none')
+      addToast({ message: t('toast.signedOut') })
     }
   }
 
@@ -118,6 +121,7 @@ export function AccountPanel({ compact }: { compact: boolean }) {
         onConfirm={async () => {
           setDialog('none')
           await signOut({ discardUnsynced: true })
+          addToast({ message: t('toast.signedOut') })
         }}
         onCancel={() => setDialog('none')}
       />
