@@ -6,6 +6,7 @@ import { PasswordInput } from '../../components/ui/PasswordInput'
 import type { TokenHashType } from '../../cloud/AuthContext'
 import { useAuth } from '../../cloud/useAuth'
 import { useLocale } from '../../i18n/useLocale'
+import { useToast } from '../../toast/useToast'
 import { AuthLayout } from './AuthLayout'
 import { useAuthError } from './useAuthError'
 
@@ -20,6 +21,7 @@ const MIN_PASSWORD_LENGTH = 8
 export function SetPasswordPage() {
   const { status, verifyTokenHash, setPassword } = useAuth()
   const { t } = useLocale()
+  const { addToast } = useToast()
   const describe = useAuthError()
   const navigate = useNavigate()
   // The token comes from the real query string (before the hash); read it once.
@@ -29,7 +31,6 @@ export function SetPasswordPage() {
   })
   const hasToken = !!token.hash && !!token.type
   const [verification, setVerification] = useState<'pending' | 'ok' | 'failed'>(hasToken ? 'pending' : 'ok')
-  const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [password, setPasswordValue] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -52,9 +53,8 @@ export function SetPasswordPage() {
   }, [hasToken, token, verifyTokenHash])
 
   // Without a token only an already signed-in user may change their password here.
-  const phase: 'verifying' | 'form' | 'done' | 'invalid' = done
-    ? 'done'
-    : verification === 'pending'
+  const phase: 'verifying' | 'form' | 'invalid' =
+    verification === 'pending'
       ? 'verifying'
       : verification === 'failed' || (!hasToken && status !== 'member' && status !== 'loading')
         ? 'invalid'
@@ -78,8 +78,8 @@ export function SetPasswordPage() {
       setError(err)
       return
     }
-    setDone(true)
-    window.setTimeout(() => navigate('/templates', { replace: true }), 800)
+    addToast({ message: t('toast.passwordSet') })
+    navigate('/templates', { replace: true })
   }
 
   return (
@@ -94,11 +94,6 @@ export function SetPasswordPage() {
             {t('auth.forgot.title')}
           </Link>
         </div>
-      )}
-      {phase === 'done' && (
-        <p className="text-sm text-success" role="status">
-          {t('auth.setPassword.done')}
-        </p>
       )}
       {phase === 'form' && (
         <form className="flex flex-col gap-4" onSubmit={submit}>

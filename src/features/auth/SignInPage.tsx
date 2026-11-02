@@ -6,12 +6,14 @@ import { PasswordInput } from '../../components/ui/PasswordInput'
 import { FORM } from '../../config/constants'
 import { useAuth } from '../../cloud/useAuth'
 import { useLocale } from '../../i18n/useLocale'
+import { useToast } from '../../toast/useToast'
 import { AuthLayout } from './AuthLayout'
 import { useAuthError } from './useAuthError'
 
 export function SignInPage() {
   const { status, signIn } = useAuth()
   const { t } = useLocale()
+  const { addToast } = useToast()
   const describe = useAuthError()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -31,6 +33,7 @@ export function SignInPage() {
     const err = await signIn(email, password)
     setWorking(false)
     if (err) setError(err)
+    else addToast({ message: t('toast.signedIn') })
   }
 
   return (

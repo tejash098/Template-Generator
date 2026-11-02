@@ -16,6 +16,7 @@ import { PageLayout } from '../../layouts/PageLayout'
 import type { BookingRecord } from '../../storage/db'
 import { bookings, type TravelDateRange } from '../../storage/bookings'
 import { TEMPLATES } from '../../templates/registry'
+import { useToast } from '../../toast/useToast'
 import { CalendarButton } from './CalendarButton'
 import { ReportActions } from './ReportActions'
 
@@ -56,6 +57,7 @@ function AmountPill({ label, value, tone }: { label: string; value: number; tone
 /** Saved bookings, newest first, with search, a travel-date filter, duplicate, delete and a day-wise report. */
 export function BookingsList() {
   const { t } = useLocale()
+  const { addToast } = useToast()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<DateMode>('all')
@@ -83,8 +85,10 @@ export function BookingsList() {
 
   const confirmDelete = async () => {
     if (!pendingDelete) return
-    await bookings.remove(pendingDelete.id)
+    const { id, bookingNo } = pendingDelete
     setPendingDelete(null)
+    await bookings.remove(id)
+    addToast({ message: t('toast.bookingDeleted', { no: bookingNo }) })
   }
 
   return (

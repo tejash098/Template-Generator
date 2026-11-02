@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { CalendarContext, type CalendarContextValue } from '../../cloud/CalendarContext'
 import type { CalendarEvent, GoogleConnection } from '../../cloud/cloudApi'
 import { LocaleProvider } from '../../i18n/LocaleProvider'
+import { ToastProvider } from '../../toast/ToastProvider'
 import type { BookingRecord } from '../../storage/db'
 import { newBookingFields } from '../../storage/bookings'
 import { CalendarButton } from './CalendarButton'
@@ -45,9 +46,11 @@ function show(value: CalendarContextValue, record = booking()) {
   return render(
     <MemoryRouter>
       <LocaleProvider>
-        <CalendarContext.Provider value={value}>
-          <CalendarButton booking={record} />
-        </CalendarContext.Provider>
+        <ToastProvider>
+          <CalendarContext.Provider value={value}>
+            <CalendarButton booking={record} />
+          </CalendarContext.Provider>
+        </ToastProvider>
       </LocaleProvider>
     </MemoryRouter>,
   )
@@ -64,13 +67,14 @@ describe('CalendarButton', () => {
     expect(container.innerHTML).toBe('')
   })
 
-  it('asks before adding, then adds', () => {
+  it('asks before adding, then adds and confirms with a toast', async () => {
     const value = calendar(connected)
     show(value)
     fireEvent.click(screen.getByRole('button', { name: 'Add to Google Calendar' }))
     expect(screen.getByText(/as an all-day event on 20\/10\/2026/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Add to calendar' }))
     expect(value.add).toHaveBeenCalledWith('b-1')
+    expect((await screen.findByRole('status')).textContent).toBe('Booking 7 added to Google Calendar')
   })
 
   it('offers open and remove once the booking is in the calendar', () => {
